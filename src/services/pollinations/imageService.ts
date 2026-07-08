@@ -3,6 +3,7 @@ import path from 'path';
 import { buildImageUrl, fetchWithAuth, type AuthConfig } from './client.js';
 import { generateFileName, uniqueFilePath, randomSeed } from '../../utils/fileUtils.js';
 import { log } from '../../utils/logger.js';
+import { DEFAULTS } from '../../config/constants.js';
 
 export interface GenerateImageOptions {
   prompt: string;
@@ -37,7 +38,7 @@ export interface GenerateImageResult {
 export async function generateImage(opts: GenerateImageOptions): Promise<GenerateImageResult> {
   const {
     prompt,
-    model = 'flux',
+    model = DEFAULTS.IMAGE_MODEL,
     seed = randomSeed(),
     width = 1024,
     height = 1024,
@@ -75,7 +76,7 @@ export async function generateImageUrlOnly(opts: GenerateImageOptions): Promise<
 }> {
   const {
     prompt,
-    model = 'flux',
+    model = DEFAULTS.IMAGE_MODEL,
     seed = randomSeed(),
     width = 1024,
     height = 1024,

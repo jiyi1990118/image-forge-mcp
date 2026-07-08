@@ -19,7 +19,7 @@ updated: 2026-07-03
       "type": "local",
       "environment": {
         "OUTPUT_DIR": "/Users/jary/Pictures/vision-output",
-        "IMAGE_MODEL": "flux",
+        "IMAGE_MODEL": "qwen-image",
         "IMAGE_WIDTH": "1024",
         "IMAGE_HEIGHT": "1024"
       }
@@ -68,7 +68,7 @@ updated: 2026-07-03
 | 变量 | 默认 | 说明 |
 |---|---|---|
 | `OUTPUT_DIR` | ./vision-output | 图片输出目录 |
-| `IMAGE_MODEL` | flux | 默认图像模型 |
+| `IMAGE_MODEL` | qwen-image | 默认图像模型 |
 | `IMAGE_WIDTH` | 1024 | 默认宽度 |
 | `IMAGE_HEIGHT` | 1024 | 默认高度 |
 | `IMAGE_AUTO_OPTIMIZE` | true | 默认是否自动精简 prompt |

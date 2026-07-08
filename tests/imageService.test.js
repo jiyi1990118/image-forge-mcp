@@ -21,6 +21,24 @@ async function withStubbedFetch(fn) {
 }
 
 describe('generateImage includeData', () => {
+  test('defaults image model to qwen-image', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'vision-image-service-'));
+    try {
+      await withStubbedFetch(async () => {
+        const result = await generateImage({
+          prompt: 'default model image',
+          outputPath: dir,
+          fileName: 'default-model',
+          includeData: false,
+        });
+
+        assert.equal(result.metadata.model, 'qwen-image');
+      });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   test('includeData=false saves the image without returning base64 data', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'vision-image-service-'));
     try {

@@ -39,8 +39,37 @@ const CHINESE_ASSET_TERMS = [
   '锤', '矛', '匕首', '武士刀',
 ];
 
+const ENGLISH_WEAPON_TERMS = [
+  'weapon', 'weapons', 'sword', 'swords', 'blade', 'blades', 'broadsword',
+  'bow', 'bows', 'crossbow', 'crossbows', 'arrow', 'arrows', 'axe', 'axes',
+  'hammer', 'hammers', 'mace', 'maces', 'spear', 'spears', 'dagger', 'daggers',
+  'katana', 'katanas', 'staff', 'wand',
+];
+const CHINESE_WEAPON_TERMS = [
+  '武器', '剑', '刀', '法杖', '魔杖', '弓', '弩', '箭', '斧', '锤', '矛', '匕首', '武士刀',
+];
+const ENGLISH_BLADED_WEAPON_TERMS = [
+  'sword', 'swords', 'blade', 'blades', 'broadsword', 'dagger', 'daggers', 'katana', 'katanas',
+];
+const CHINESE_BLADED_WEAPON_TERMS = ['剑', '刀', '匕首', '武士刀'];
+const CHINESE_CULTURAL_TERMS = [
+  '中国', '中文', '古风', '国风', '仙侠', '武侠', '神剑', '倚天', '倚天剑', '青龙', '龙纹', '水墨',
+];
+const ENGLISH_ORGANIC_TERMS = [
+  'mushroom', 'mushrooms', 'fungus', 'fungi', 'plant', 'plants', 'flower', 'flowers',
+  'tree', 'trees', 'leaf', 'leaves', 'grass', 'vine', 'vines', 'fruit', 'fruits',
+  'vegetable', 'vegetables', 'herb', 'herbs', 'seed', 'seeds', 'sprout', 'sprouts',
+];
+const CHINESE_ORGANIC_TERMS = [
+  '蘑菇', '小蘑菇', '菌菇', '植物', '花', '花朵', '树', '树木', '叶', '叶子',
+  '草', '藤蔓', '水果', '果实', '蔬菜', '草药', '种子', '嫩芽',
+];
+
 const NO_TEXT_PROMPT = 'No text, no letters, no words, no readable signs, no logos, no watermark.';
-const ASSET_PROMPT = 'complete object, fully visible, centered, uncropped, clean silhouette, sharp outline, well-defined edges.';
+const ASSET_PROMPT = 'game asset icon, complete object, fully visible, centered, uncropped, clean silhouette, sharp outline, well-defined edges, plain white background.';
+const WEAPON_PROMPT = 'single weapon only, one complete object, no duplicate weapons, no crossed weapons, no extra blade, no extra handle, no scabbard.';
+const BLADED_WEAPON_PROMPT = 'one blade, one handle, straight continuous blade, symmetric weapon silhouette, product view, not a pair.';
+const ORGANIC_PROMPT = 'single organic object, smooth continuous natural shape, seamless stem, no horizontal seam, no ring band, no belt, no mechanical joint, no segmented body.';
 
 function tokenizeEnglish(prompt: string): string[] {
   return prompt.toLowerCase().match(/[a-z0-9]+/g) || [];
@@ -59,12 +88,42 @@ function shouldUseAssetPipeline(prompt: string): boolean {
   return hasAnyToken(tokens, ENGLISH_ASSET_TERMS) || hasAnySubstring(prompt, CHINESE_ASSET_TERMS);
 }
 
+function isWeaponAssetPrompt(prompt: string): boolean {
+  const tokens = tokenizeEnglish(prompt);
+  return hasAnyToken(tokens, ENGLISH_WEAPON_TERMS) || hasAnySubstring(prompt, CHINESE_WEAPON_TERMS);
+}
+
+function isBladedWeaponPrompt(prompt: string): boolean {
+  const tokens = tokenizeEnglish(prompt);
+  return hasAnyToken(tokens, ENGLISH_BLADED_WEAPON_TERMS) || hasAnySubstring(prompt, CHINESE_BLADED_WEAPON_TERMS);
+}
+
+function isOrganicAssetPrompt(prompt: string): boolean {
+  const tokens = tokenizeEnglish(prompt);
+  return hasAnyToken(tokens, ENGLISH_ORGANIC_TERMS) || hasAnySubstring(prompt, CHINESE_ORGANIC_TERMS);
+}
+
+function shouldUseQwenImage(prompt: string): boolean {
+  return shouldUseAssetPipeline(prompt) && hasAnySubstring(prompt, CHINESE_CULTURAL_TERMS);
+}
+
 function addNoTextConstraint(prompt: string): string {
   return `${prompt}, ${NO_TEXT_PROMPT}`;
 }
 
 function addAssetConstraint(prompt: string): string {
-  return shouldUseAssetPipeline(prompt) ? `${prompt}, ${ASSET_PROMPT}` : prompt;
+  if (!shouldUseAssetPipeline(prompt)) return prompt;
+
+  const constraints = [ASSET_PROMPT];
+  if (isWeaponAssetPrompt(prompt)) constraints.push(WEAPON_PROMPT);
+  if (isBladedWeaponPrompt(prompt)) constraints.push(BLADED_WEAPON_PROMPT);
+  if (isOrganicAssetPrompt(prompt)) constraints.push(ORGANIC_PROMPT);
+  return `${prompt}, ${constraints.join(' ')}`;
+}
+
+function selectImageModel(prompt: string, explicitModel: unknown): string {
+  if (explicitModel) return String(explicitModel);
+  return shouldUseQwenImage(prompt) ? 'qwen-image' : DEFAULTS.IMAGE_MODEL;
 }
 
 function shouldApplyNoTextConstraint(value: unknown): boolean {
@@ -126,7 +185,7 @@ export async function handleGenerateImage(
 
   const result = await generateImage({
     prompt: generationPrompt,
-    model: args.model ? String(args.model) : DEFAULTS.IMAGE_MODEL,
+    model: selectImageModel(prompt, args.model),
     seed: args.seed ? Number(args.seed) : randomSeed(),
     width: args.width ? Number(args.width) : DEFAULTS.IMAGE_WIDTH,
     height: args.height ? Number(args.height) : DEFAULTS.IMAGE_HEIGHT,
@@ -284,7 +343,7 @@ export async function handleGenerateImageUrl(
 
   const result = await generateImageUrlOnly({
     prompt: generationPrompt,
-    model: args.model ? String(args.model) : DEFAULTS.IMAGE_MODEL,
+    model: selectImageModel(prompt, args.model),
     seed: args.seed ? Number(args.seed) : randomSeed(),
     width: args.width ? Number(args.width) : DEFAULTS.IMAGE_WIDTH,
     height: args.height ? Number(args.height) : DEFAULTS.IMAGE_HEIGHT,

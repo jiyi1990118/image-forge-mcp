@@ -15,10 +15,10 @@ export interface TextModelInfo {
 }
 
 export const IMAGE_MODELS: ImageModelInfo[] = [
-  { name: 'flux', status: 'available', bestFor: 'general purpose (default)' },
+  { name: 'flux', status: 'available', bestFor: 'general purpose' },
   { name: 'turbo', status: 'available', bestFor: 'fast generation' },
   { name: 'gptimage', status: 'available', bestFor: 'photorealistic' },
-  { name: 'qwen-image', status: 'available', bestFor: 'Chinese scenes, cultural art' },
+  { name: 'qwen-image', status: 'available', bestFor: 'Chinese scenes, cultural art (default)' },
   { name: 'grok-imagine', status: 'available', bestFor: 'creative' },
   { name: 'zimage', status: 'available', bestFor: 'general' },
   { name: 'wan-image', status: 'available', bestFor: 'Chinese scenes' },

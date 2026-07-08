@@ -156,7 +156,7 @@ Do Not Use
 --------
 Do not use for:
 - listing text models (use listTextModels instead)
-- generating an image (use generateImage instead — you don't need to list models first, flux is the default)
+- generating an image (use generateImage instead — you don't need to list models first, qwen-image is the default)
 - optimizing a prompt (use optimizePrompt instead)
 
 Input
@@ -180,7 +180,7 @@ User: "Which model is best for rendering text in images?"
 → Use this tool.
 
 User: "Generate an image of a cat"
-→ Do NOT use. Use generateImage instead (flux is the default, no need to list first).
+→ Do NOT use. Use generateImage instead (qwen-image is the default, no need to list first).
 
 User: "What text models do you have?"
 → Do NOT use. Use listTextModels instead.`,

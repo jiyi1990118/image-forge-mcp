@@ -119,6 +119,8 @@ describe('schema registry', () => {
   test('generateImage schema documents automatic asset prompt constraints', () => {
     const s = getAllToolSchemas().find((x) => x.name === 'generateImage');
     assert.match(s.description, /asset\/icon\/item\/sprite\/weapon\/equipment prompts automatically add complete-object and sharp-edge generation constraints/i);
+    assert.match(s.description, /Weapon and sword prompts add single-subject constraints/i);
+    assert.match(s.description, /Organic and plant prompts add seamless natural-shape constraints/i);
     assert.match(s.description, /fully visible/i);
     assert.match(s.description, /well-defined edges/i);
   });

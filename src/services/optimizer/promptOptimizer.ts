@@ -36,7 +36,9 @@ export async function optimizePrompt(
 }
 
 export function shouldOptimize(prompt: string, threshold: number = 40): boolean {
-  return countWords(prompt) > threshold;
+  if (countWords(prompt) > threshold) return true;
+  const compactCjk = prompt.match(/[\u3400-\u9fff]/g)?.length || 0;
+  return compactCjk > 60;
 }
 
 export function countWords(text: string): number {

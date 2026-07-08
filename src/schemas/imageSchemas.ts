@@ -26,7 +26,7 @@ Do not use for:
 Input
 --------
 prompt: string — Text description of the image. Can be long/complex; auto-optimized by default.
-model: string (optional) — Image model (default: flux). Use listImageModels for options.
+model: string (optional) — Image model (default: qwen-image). Use listImageModels for options.
 seed: number (optional) — Reproducibility seed. Different seeds = different images.
 width/height: number (optional) — Requested dimensions (default: 1024). Free tier downsamples to 768px max.
 autoOptimize: boolean (optional, default: true) — Auto-compress prompt for free-tier quality.
@@ -51,7 +51,7 @@ enhanceContrast: boolean (optional, default: false) — CLAHE local contrast enh
 removeBackground: boolean (optional, default: false) — Optional background removal via ONNX or background-color analysis -> transparent PNG. Auto-enabled for asset prompts such as asset/icon/sprite/item/weapon/sword/shield/inventory/素材/图标/道具/武器/装备 keywords (explicit value always wins).
 removeBackgroundStrategy: enum (optional, default: auto) — auto|default|preserve-light-subject|clean-edge. auto samples image edges to pick a safer background removal path: light/white backgrounds preserve light subjects; saturated solid backgrounds use color edge cleanup; uncertain backgrounds use default AI removal.
 
-Prompt quality tip: generated images are more reliable when the prompt has one clear subject, one composition, and one visual mood. Asset/icon/item/sprite/weapon/equipment prompts automatically add complete-object and sharp-edge generation constraints such as fully visible, uncropped, clean silhouette, sharp outline, and well-defined edges. For developer/workstation scenes, prefer "blurred screens" and "abstract UI shapes" over detailed code or many monitor elements. For transparent assets, prompt a plain white background and use removeBackground=true; avoid asking the image model for transparent background when quality matters.
+Prompt quality tip: generated images are more reliable when the prompt has one clear subject, one composition, and one visual mood. Asset/icon/item/sprite/weapon/equipment prompts automatically add complete-object and sharp-edge generation constraints such as fully visible, uncropped, clean silhouette, sharp outline, and well-defined edges. Weapon and sword prompts add single-subject constraints to reduce duplicate weapons, crossed weapons, extra blades, and extra handles. Organic and plant prompts add seamless natural-shape constraints to reduce seams, ring bands, belts, mechanical joints, and segmented stems. For developer/workstation scenes, prefer "blurred screens" and "abstract UI shapes" over detailed code or many monitor elements. For transparent assets, prompt a plain white background and use removeBackground=true; avoid asking the image model for transparent background when quality matters.
 
 Output control:
 compress: boolean (optional, default: true) — Compress PNG with pngquant+zopfli.
@@ -90,7 +90,7 @@ User: "Give me just the URL for an image of a cat"
     type: 'object',
     properties: {
       prompt: { type: 'string', description: 'Text description of image. Can be long/complex — will be auto-optimized by default.' },
-      model: { type: 'string', default: 'flux', description: 'Image model. Default: flux. Use listImageModels for options.' },
+      model: { type: 'string', default: 'qwen-image', description: 'Image model. Default: qwen-image. Use listImageModels for options.' },
       seed: { type: 'number', description: 'Seed for reproducibility. Different seeds = different images.' },
       width: { type: 'number', default: 1024, description: 'Requested width. Free tier downsamples to 768px max.' },
       height: { type: 'number', default: 1024, description: 'Requested height. Free tier downsamples to 768px max.' },
@@ -147,7 +147,7 @@ Do not use for:
 Input
 --------
 prompt: string — Text description of the image.
-model: string (optional) — Image model (default: flux).
+model: string (optional) — Image model (default: qwen-image).
 seed: number (optional) — Reproducibility seed.
 width/height: number (optional) — Requested dimensions (default: 1024). Free tier downsamples to 768px.
 autoOptimize: boolean (optional, default: true) — Auto-optimize prompt.
@@ -183,7 +183,7 @@ User: "What is 2+2?"
     type: 'object',
     properties: {
       prompt: { type: 'string', description: 'Text description of image.' },
-      model: { type: 'string', default: 'flux', description: 'Image model. Default: flux.' },
+      model: { type: 'string', default: 'qwen-image', description: 'Image model. Default: qwen-image.' },
       seed: { type: 'number', description: 'Seed for reproducibility. Different seeds = different images.' },
       width: { type: 'number', default: 1024, description: 'Requested width. Free tier downsamples to 768px max.' },
       height: { type: 'number', default: 1024, description: 'Requested height. Free tier downsamples to 768px max.' },

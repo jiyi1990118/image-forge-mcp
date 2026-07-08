@@ -221,6 +221,100 @@ describe('handleGenerateImage returnMode and enhancement pipeline', () => {
     }
   });
 
+  test('weapon asset prompts add single-subject and anti-duplicate constraints', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'vision-generate-handler-'));
+    try {
+      await withStubbedFetch(async () => {
+        const result = await handleGenerateImage({
+          prompt: '游戏素材 倚天剑 主体完整 边缘清晰 彩色炫光 背景透明',
+          autoOptimize: false,
+          outputPath: dir,
+          fileName: 'weapon_single_subject_constraints',
+          realEsrgan: false,
+          removeBackground: false,
+          compress: false,
+          returnMode: 'path',
+        }, null);
+
+        assert.match(result.content[0].text, /single weapon only, one complete object/);
+        assert.match(result.content[0].text, /no duplicate weapons, no crossed weapons/);
+        assert.match(result.content[0].text, /one blade, one handle, straight continuous blade/);
+        assert.match(result.content[0].text, /not a pair/);
+      });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('organic mushroom asset prompts add seamless natural-shape constraints', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'vision-generate-handler-'));
+    try {
+      await withStubbedFetch(async () => {
+        const result = await handleGenerateImage({
+          prompt: '赛博朋克风格 雨天的小蘑菇 粉色 游戏素材',
+          autoOptimize: false,
+          outputPath: dir,
+          fileName: 'organic_mushroom_constraints',
+          realEsrgan: false,
+          removeBackground: false,
+          compress: false,
+          returnMode: 'path',
+        }, null);
+
+        assert.match(result.content[0].text, /single organic object, smooth continuous natural shape/);
+        assert.match(result.content[0].text, /seamless stem, no horizontal seam/);
+        assert.match(result.content[0].text, /no ring band, no belt, no mechanical joint, no segmented body/);
+      });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('Chinese cultural asset prompts default to qwen-image when model is not explicit', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'vision-generate-handler-'));
+    try {
+      await withStubbedFetch(async () => {
+        const result = await handleGenerateImage({
+          prompt: '游戏素材 倚天剑 中国古风神剑',
+          autoOptimize: false,
+          outputPath: dir,
+          fileName: 'qwen_default_chinese_asset',
+          realEsrgan: false,
+          removeBackground: false,
+          compress: false,
+          returnMode: 'path',
+        }, null);
+
+        assert.match(result.content[0].text, /"model": "qwen-image"/);
+      });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('explicit model overrides qwen-image default for Chinese cultural assets', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'vision-generate-handler-'));
+    try {
+      await withStubbedFetch(async () => {
+        const result = await handleGenerateImage({
+          prompt: '游戏素材 倚天剑 中国古风神剑',
+          model: 'flux',
+          autoOptimize: false,
+          outputPath: dir,
+          fileName: 'explicit_model_chinese_asset',
+          realEsrgan: false,
+          removeBackground: false,
+          compress: false,
+          returnMode: 'path',
+        }, null);
+
+        assert.match(result.content[0].text, /"model": "flux"/);
+      });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   test('asset prompt matching covers common asset terms without substring false positives', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'vision-generate-handler-'));
     try {

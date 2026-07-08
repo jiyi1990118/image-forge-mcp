@@ -21,7 +21,7 @@ function readNumberEnv(name: string, defaultValue: number): number {
 
 export const DEFAULTS = {
   OUTPUT_DIR: process.env.OUTPUT_DIR || './vision-output',
-  IMAGE_MODEL: process.env.IMAGE_MODEL || 'flux',
+  IMAGE_MODEL: process.env.IMAGE_MODEL || 'qwen-image',
   IMAGE_WIDTH: readNumberEnv('IMAGE_WIDTH', 1024),
   IMAGE_HEIGHT: readNumberEnv('IMAGE_HEIGHT', 1024),
   IMAGE_AUTO_OPTIMIZE: readBooleanEnv('IMAGE_AUTO_OPTIMIZE', true),

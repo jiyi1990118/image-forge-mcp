@@ -12,7 +12,7 @@ updated: 2026-07-07
 
 | 变量 | 默认 | 说明 |
 |---|---|---|
-| `IMAGE_MODEL` | `flux` | 默认图像模型 |
+| `IMAGE_MODEL` | `qwen-image` | 默认图像模型 |
 | `IMAGE_WIDTH` | `1024` | 默认请求宽度 |
 | `IMAGE_HEIGHT` | `1024` | 默认请求高度 |
 | `IMAGE_AUTO_OPTIMIZE` | `true` | 默认是否自动精简 prompt |
