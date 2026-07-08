@@ -22,44 +22,44 @@ async function withStubbedFetch(fn) {
 }
 
 describe('handleGenerateImage returnMode and enhancement pipeline', () => {
-  test('selectRealEsrganModel defaults illustration and anime prompts to anime video model', () => {
+  test('selectRealEsrganModel defaults non-photo generated images to animevideov3', () => {
     assert.equal(selectRealEsrganModel('anime character illustration', 'auto'), 'realesr-animevideov3');
     assert.equal(selectRealEsrganModel('anime half-body portrait of a senior frontend engineer', 'auto'), 'realesr-animevideov3');
     assert.equal(selectRealEsrganModel('digital art portrait with abstract UI shapes', 'auto'), 'realesr-animevideov3');
     assert.equal(selectRealEsrganModel('quiet watercolor landscape', 'auto'), 'realesr-animevideov3');
   });
 
-  test('selectRealEsrganModel selects x4plus for photo and realistic prompts', () => {
-    assert.equal(selectRealEsrganModel('realistic portrait photo taken with a camera', 'auto'), 'realesrgan-x4plus');
-    assert.equal(selectRealEsrganModel('写实 人像 摄影', 'auto'), 'realesrgan-x4plus');
+  test('selectRealEsrganModel defaults photo and realistic prompts to animevideov3', () => {
+    assert.equal(selectRealEsrganModel('realistic portrait photo taken with a camera', 'auto'), 'realesr-animevideov3');
+    assert.equal(selectRealEsrganModel('写实 人像 摄影', 'auto'), 'realesr-animevideov3');
   });
 
-  test('selectRealEsrganModel keeps asset and icon prompts on anime video model by default', () => {
+  test('selectRealEsrganModel defaults asset and icon prompts to animevideov3', () => {
     assert.equal(selectRealEsrganModel('game item icon sprite asset', 'auto'), 'realesr-animevideov3');
     assert.equal(selectRealEsrganModel('道具 图标 贴图 素材', 'auto'), 'realesr-animevideov3');
     assert.equal(selectRealEsrganModel('anime 2D game asset dragon-slaying broadsword particle effects', 'auto'), 'realesr-animevideov3');
   });
 
-  test('selectRealEsrganModel selects anime x4plus only for explicit asset upscaling intent', () => {
-    assert.equal(selectRealEsrganModel('game item icon sprite asset upscale', 'auto'), 'realesrgan-x4plus-anime');
-    assert.equal(selectRealEsrganModel('道具 图标 素材 超分 放大', 'auto'), 'realesrgan-x4plus-anime');
+  test('selectRealEsrganModel defaults explicit asset upscaling intent to animevideov3', () => {
+    assert.equal(selectRealEsrganModel('game item icon sprite asset upscale', 'auto'), 'realesr-animevideov3');
+    assert.equal(selectRealEsrganModel('道具 图标 素材 超分 放大', 'auto'), 'realesr-animevideov3');
   });
 
-  test('selectRealEsrganModel keeps soft ink and watercolor assets on anime video model', () => {
+  test('selectRealEsrganModel defaults soft ink and watercolor assets to animevideov3', () => {
     assert.equal(selectRealEsrganModel('small penguin colorful Chinese ink wash game asset', 'auto'), 'realesr-animevideov3');
     assert.equal(selectRealEsrganModel('watercolor icon with soft brush strokes', 'auto'), 'realesr-animevideov3');
     assert.equal(selectRealEsrganModel('水墨 小企鹅 图标 素材', 'auto'), 'realesr-animevideov3');
   });
 
   test('selectRealEsrganModel avoids English substring false positives', () => {
-    assert.equal(selectRealEsrganModel('iconic realistic portrait photo', 'auto'), 'realesrgan-x4plus');
+    assert.equal(selectRealEsrganModel('iconic realistic portrait photo', 'auto'), 'realesr-animevideov3');
     assert.equal(selectRealEsrganModel('bionic portrait', 'auto'), 'realesr-animevideov3');
-    assert.equal(selectRealEsrganModel('endgame realistic photo', 'auto'), 'realesrgan-x4plus');
+    assert.equal(selectRealEsrganModel('endgame realistic photo', 'auto'), 'realesr-animevideov3');
   });
 
   test('selectRealEsrganModel only treats game as asset intent with asset-like terms', () => {
     assert.equal(selectRealEsrganModel('game screenshot', 'auto'), 'realesr-animevideov3');
-    assert.equal(selectRealEsrganModel('realistic game character', 'auto'), 'realesrgan-x4plus');
+    assert.equal(selectRealEsrganModel('realistic game character', 'auto'), 'realesr-animevideov3');
     assert.equal(selectRealEsrganModel('game sprite item', 'auto'), 'realesr-animevideov3');
   });
 
@@ -71,10 +71,11 @@ describe('handleGenerateImage returnMode and enhancement pipeline', () => {
   test('selectRealEsrganModel preserves explicit model overrides', () => {
     assert.equal(selectRealEsrganModel('realistic portrait photo', 'realesr-animevideov3'), 'realesr-animevideov3');
     assert.equal(selectRealEsrganModel('game item icon', 'realesrgan-x4plus'), 'realesrgan-x4plus');
+    assert.equal(selectRealEsrganModel('game item icon', 'realesrgan-x4plus-anime'), 'realesrgan-x4plus-anime');
   });
 
   test('selectRealEsrganModel treats invalid explicit models as auto', () => {
-    assert.equal(selectRealEsrganModel('realistic portrait photo', 'invalid-model'), 'realesrgan-x4plus');
+    assert.equal(selectRealEsrganModel('realistic portrait photo', 'invalid-model'), 'realesr-animevideov3');
     assert.equal(selectRealEsrganModel('game item icon', 'invalid-model'), 'realesr-animevideov3');
   });
 
@@ -154,7 +155,7 @@ describe('handleGenerateImage returnMode and enhancement pipeline', () => {
           returnMode: 'path',
         }, null);
 
-        assert.match(result.content[0].text, /Enhancement: Real-ESRGAN model: realesrgan-x4plus\./);
+        assert.match(result.content[0].text, /Enhancement: Real-ESRGAN model: realesr-animevideov3\./);
         assert.match(result.content[0].text, /Enhanced with (Real-ESRGAN|sharp CPU fallback)/);
       });
     } finally {

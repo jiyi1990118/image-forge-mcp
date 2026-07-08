@@ -111,10 +111,9 @@ describe('schema registry', () => {
     const docs = `${s.description}\n${p.realEsrganModel.description}`;
     assert.match(docs, /realEsrganModel: enum \(optional, default: auto\)/i);
     assert.match(docs, /auto\|realesrgan-x4plus\|realesrgan-x4plus-anime\|realesr-animevideov3/i);
-    assert.match(docs, /default generated images, stylized prompts \(anime\/manga\/cartoon\/illustration\/painting\/digital art\), soft watercolor\/ink\/brush prompts, and asset\/icon\/item\/sprite\/weapon\/equipment prompts by default/i);
-    assert.match(docs, /only when those asset-style prompts also explicitly mention upscaling\/enlarging\/super-resolution/i);
-    assert.match(docs, /strong photo prompts \(photo\/photograph\/realistic\/photorealistic\/camera\/DSLR\/lens\)/i);
-    assert.match(docs, /portrait is (treated as )?composition, not a photo signal/i);
+    assert.match(docs, /auto selects realesr-animevideov3/i);
+    assert.match(docs, /Explicit model values override auto selection/i);
+    assert.match(docs, /use realesrgan-x4plus or realesrgan-x4plus-anime only when explicitly requested/i);
   });
 
   test('generateImage schema documents automatic asset prompt constraints', () => {
@@ -136,7 +135,7 @@ describe('schema registry', () => {
   test('enhanceImage schema exposes Real-ESRGAN defaults', () => {
     const s = getAllToolSchemas().find((x) => x.name === 'enhanceImage');
     assert.ok(s.inputSchema.required.includes('inputPath'));
-    assert.equal(s.inputSchema.properties.model.default, 'realesrgan-x4plus-anime');
+    assert.equal(s.inputSchema.properties.model.default, 'realesr-animevideov3');
     assert.deepEqual(s.inputSchema.properties.model.enum, [
       'realesrgan-x4plus', 'realesrgan-x4plus-anime', 'realesr-animevideov3',
     ]);

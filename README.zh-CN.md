@@ -143,13 +143,7 @@ generate -> save raw -> optional clarity -> enhancement -> optional background r
 | `realEsrganScale` | `2` |
 | `compress` | `true` |
 
-`realEsrganModel: "auto"` 的选择规则：
-
-- 默认生成图、风格化 prompt、水彩/水墨/brush prompt、asset/icon/item/sprite/weapon/equipment 素材类 prompt 默认使用 `realesr-animevideov3`。
-- 只有这些素材类 prompt 同时明确包含 upscaling/enlarging/super-resolution/超分/放大/高清化 等意图时，才使用 `realesrgan-x4plus-anime`。
-- 只有 photo、photograph、realistic、photorealistic、camera、DSLR、lens 等强写实摄影 prompt 使用 `realesrgan-x4plus`。
-
-`portrait` 只作为构图词，不单独触发照片模型，所以 `anime portrait` 仍会使用 `realesr-animevideov3`。显式传入 `realEsrganModel` 会覆盖自动选择。
+`realEsrganModel: "auto"` 现在默认选择 `realesr-animevideov3` 作为生成图增强模型。显式传入模型仍会覆盖自动选择，因此只有你明确需要时才传 `realesrgan-x4plus` 或 `realesrgan-x4plus-anime`。
 
 ## Prompt 建议
 

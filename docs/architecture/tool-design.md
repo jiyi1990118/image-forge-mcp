@@ -71,7 +71,7 @@ generate raw → optional clarity (denoise/sharpen/CLAHE off by default) → enh
 ```
 顺序理由：先在不透明原图做 clarity 和增强，最后抠图，避免 sharp/Real-ESRGAN 作用于最终 alpha 通道。
 
-**默认行为：** 默认产出原始图和增强后的最终 PNG，本地路径通过文本返回。只有显式开启 `denoise`、`sharpen` 或 `enhanceContrast` 时才会产出 clarity `_processed.png` 中间文件。Real-ESRGAN/Vulkan 支持且二进制可用时优先使用；支持但缺失时自动下载；不支持或运行失败时使用 sharp CPU fallback。`realEsrganModel` 默认 `auto`：default、anime/manga/cartoon/illustration/painting/digital art、水墨/水彩/brush/ink/watercolor、asset/icon/item/sprite/weapon/equipment prompt 默认 → `realesr-animevideov3`；只有这些素材类 prompt 同时明确出现 upscale/enlarge/super-resolution/超分/放大/高清化 等放大意图时 → `realesrgan-x4plus-anime`；photo/photograph/realistic/photorealistic/camera/DSLR/lens prompt → `realesrgan-x4plus`。`portrait` 只当构图词，不单独触发照片模型。显式传具体模型会覆盖自动选择。`denoise`、`sharpen` 和 `enhanceContrast` 仍默认关闭，`compress` 默认开启。
+**默认行为：** 默认产出原始图和增强后的最终 PNG，本地路径通过文本返回。只有显式开启 `denoise`、`sharpen` 或 `enhanceContrast` 时才会产出 clarity `_processed.png` 中间文件。Real-ESRGAN/Vulkan 支持且二进制可用时优先使用；支持但缺失时自动下载；不支持或运行失败时使用 sharp CPU fallback。`realEsrganModel` 默认 `auto`，生成图增强默认选择 `realesr-animevideov3`；显式传具体模型会覆盖自动选择。`denoise`、`sharpen` 和 `enhanceContrast` 仍默认关闭，`compress` 默认开启。
 
 **素材 prompt 约束：** asset/icon/item/sprite/weapon/equipment/素材/图标/道具/武器/装备 等 prompt 在调用 Pollinations 前会自动追加完整主体和边缘约束，要求 complete object、fully visible、uncropped、clean silhouette、sharp outline、well-defined edges。英文关键词按 token 匹配，避免 iconic/bionic/endgame 这类子串误触发；texture 不再自动触发素材抠图。这解决的是原始生成阶段主体被裁切、轮廓发软的问题，不依赖后处理补救。
 
@@ -89,7 +89,7 @@ generate raw → optional clarity (denoise/sharpen/CLAHE off by default) → enh
 |---|---|---|---|
 | `inputPath` | string | (必填) | 已存在的本地图片路径 |
 | `outputPath` | string | 同目录 `_realesrgan_x{scale}.png` | 输出 PNG 路径 |
-| `model` | enum | `realesrgan-x4plus-anime` | `realesrgan-x4plus`/`realesrgan-x4plus-anime`/`realesr-animevideov3` |
+| `model` | enum | `realesr-animevideov3` | `realesrgan-x4plus`/`realesrgan-x4plus-anime`/`realesr-animevideov3` |
 | `scale` | enum | `2` | `2`/`3`/`4`，Windows 集显建议先试 2 |
 | `autoDownload` | boolean | `true` | 未设置 `REALESRGAN_PATH` 且缓存中无二进制时自动下载 |
 | `timeoutMs` | number | `120000` | Real-ESRGAN 子进程超时 |

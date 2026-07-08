@@ -26,7 +26,7 @@ Input
 --------
 inputPath: string — Existing local image path to enhance.
 outputPath: string (optional) — Output PNG path. Default: same directory with _realesrgan_x{scale}.png suffix.
-model: enum (optional, default: realesrgan-x4plus-anime) — realesrgan-x4plus | realesrgan-x4plus-anime | realesr-animevideov3.
+model: enum (optional, default: realesr-animevideov3) — realesrgan-x4plus | realesrgan-x4plus-anime | realesr-animevideov3.
 scale: enum (optional, default: 2) — 2|3|4. Windows integrated GPUs should start with 2.
 autoDownload: boolean (optional, default: true) — Download current-platform Real-ESRGAN package (~45-50 MB zip, ~100 MB extracted) to the project .cache/realesrgan/v0.2.5.0/<platform> directory on first use if REALESRGAN_PATH is not set; REALESRGAN_CACHE_DIR overrides the cache root.
 timeoutMs: number (optional, default: 120000) — Process timeout.
@@ -58,7 +58,7 @@ User: "生成一张法杖图"
     properties: {
       inputPath: { type: 'string', description: 'Existing local image path to enhance.' },
       outputPath: { type: 'string', description: 'Output PNG path. Default: same directory with _realesrgan_x{scale}.png suffix.' },
-      model: { type: 'string', default: 'realesrgan-x4plus-anime', enum: ['realesrgan-x4plus', 'realesrgan-x4plus-anime', 'realesr-animevideov3'], description: 'Real-ESRGAN model. anime is recommended for game assets/icons.' },
+      model: { type: 'string', default: 'realesr-animevideov3', enum: ['realesrgan-x4plus', 'realesrgan-x4plus-anime', 'realesr-animevideov3'], description: 'Real-ESRGAN model. animevideov3 is the default unless x4plus or x4plus-anime is explicitly requested.' },
       scale: { type: 'number', default: 2, enum: [2, 3, 4], description: 'Upscale factor. Start with 2 on Windows integrated GPUs.' },
       autoDownload: { type: 'boolean', default: true, description: 'Auto-download current-platform Real-ESRGAN binary if REALESRGAN_PATH is not set.' },
       timeoutMs: { type: 'number', default: 120000, description: 'Process timeout in milliseconds.' },

@@ -43,7 +43,7 @@ updated: 2026-07-07
 | `realEsrgan` | boolean | `true` | 默认对生成图做增强 |
 | `enhanceBackend` | enum | `auto` | `auto`/`realesrgan`/`sharp`/`none` |
 | `enhanceFallback` | enum | `sharp` | Real-ESRGAN 不可用时默认 sharp CPU 兜底 |
-| `realEsrganModel` | enum | `auto` | 生成图增强用 Real-ESRGAN 模型；`auto` 按 prompt 选择，显式模型值优先 |
+| `realEsrganModel` | enum | `auto` | 生成图增强用 Real-ESRGAN 模型；`auto` 默认使用 `realesr-animevideov3`，显式模型值优先 |
 | `realEsrganScale` | enum | `2` | 增强倍率 `2`/`3`/`4` |
 | `realEsrganAutoDownload` | boolean | `true` | 支持平台下自动下载 Real-ESRGAN 二进制 |
 | `realEsrganTimeoutMs` | number | `120000` | Real-ESRGAN 超时 |
@@ -51,7 +51,7 @@ updated: 2026-07-07
 
 **默认行为：** 生成原始图后默认跳过 clarity（`denoise=false`，`sharpen=false`，`enhanceContrast=false`），直接执行 `enhanceBackend='auto'` 增强：优先 Real-ESRGAN，当前环境支持但缺少二进制时自动下载；不支持、Vulkan 不可用或运行失败时默认使用 sharp CPU fallback。只有显式开启 `denoise`、`sharpen` 或 `enhanceContrast` 时才会产出 `_processed.png`。之后按显式参数或关键词自动执行 `removeBackground`，最后 `compress=true` 压缩 PNG。响应默认只返回本地路径；传 `returnMode: 'binary'` 或 `'both'` 返回图片内容。
 
-**`realEsrganModel='auto'` 映射：** default、anime/manga/cartoon/illustration/painting/digital art、水墨/水彩/brush/ink/watercolor、asset/icon/item/sprite/weapon/equipment prompt 默认 → `realesr-animevideov3`；只有这些素材类 prompt 同时明确出现 upscale/enlarge/super-resolution/超分/放大/高清化 等放大意图时 → `realesrgan-x4plus-anime`；photo/photograph/realistic/photorealistic/camera/DSLR/lens prompt → `realesrgan-x4plus`。`portrait` 只当构图词，不单独触发照片模型。显式传 `realesrgan-x4plus`、`realesrgan-x4plus-anime` 或 `realesr-animevideov3` 会覆盖自动选择。
+**`realEsrganModel='auto'` 映射：** 生成图增强默认 → `realesr-animevideov3`。显式传 `realesrgan-x4plus` 或 `realesrgan-x4plus-anime` 会覆盖自动选择；只有明确需要这两个模型时才建议手动传入。
 
 **默认 no-text 约束：** 生成 prompt 默认会追加 `No text, no letters, no words, no readable signs, no logos, no watermark.`。传 `noTextConstraint: false` 可关闭，适合海报文字、UI 截图、标牌、logo 或屏幕/代码场景冲突时使用。
 
@@ -71,7 +71,7 @@ updated: 2026-07-07
 |---|---|---|---|---|
 | `inputPath` | string | ✅ | — | 输入图片路径 |
 | `outputPath` | string | — | 同目录 `_realesrgan_x{scale}.png` | 输出 PNG 路径 |
-| `model` | enum | — | `realesrgan-x4plus-anime` | `realesrgan-x4plus`/`realesrgan-x4plus-anime`/`realesr-animevideov3` |
+| `model` | enum | — | `realesr-animevideov3` | `realesrgan-x4plus`/`realesrgan-x4plus-anime`/`realesr-animevideov3` |
 | `scale` | enum | — | `2` | `2`/`3`/`4`，Windows 集显建议先用 2 |
 | `autoDownload` | boolean | — | `true` | 未设置 `REALESRGAN_PATH` 时自动下载当前平台二进制 |
 | `timeoutMs` | number | — | `120000` | 进程超时 |

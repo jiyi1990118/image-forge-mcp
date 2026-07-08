@@ -143,13 +143,7 @@ Important defaults:
 | `realEsrganScale` | `2` |
 | `compress` | `true` |
 
-`realEsrganModel: "auto"` chooses:
-
-- `realesr-animevideov3` for default generated images, stylized prompts, soft watercolor/ink/brush prompts, and asset/icon/item/sprite/weapon/equipment prompts by default.
-- `realesrgan-x4plus-anime` only when those asset-style prompts also explicitly mention upscaling/enlarging/super-resolution.
-- `realesrgan-x4plus` only for strong photo prompts such as photo, photograph, realistic, photorealistic, camera, DSLR, or lens.
-
-`portrait` is treated as a composition term, not a photo signal, so `anime portrait` stays on `realesr-animevideov3`. Explicit `realEsrganModel` values always override the automatic choice.
+`realEsrganModel: "auto"` now chooses `realesr-animevideov3` by default for generated-image enhancement. Explicit values still override the automatic choice, so pass `realesrgan-x4plus` or `realesrgan-x4plus-anime` only when you specifically want those models.
 
 ## Prompt Tips
 

@@ -14,7 +14,7 @@ export async function handleEnhanceImage(
 
   const scaleRaw = args.scale ? Number(args.scale) : 2;
   const scale = scaleRaw === 3 || scaleRaw === 4 ? scaleRaw : 2;
-  const model = (args.model ? String(args.model) : 'realesrgan-x4plus-anime') as RealEsrganModel;
+  const model = (args.model ? String(args.model) : 'realesr-animevideov3') as RealEsrganModel;
   const outputPath = args.outputPath ? String(args.outputPath) : undefined;
   const autoDownload = args.autoDownload !== undefined ? args.autoDownload !== false : true;
   const timeoutMs = args.timeoutMs ? Number(args.timeoutMs) : 120000;

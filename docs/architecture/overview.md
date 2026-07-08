@@ -102,7 +102,7 @@ agent 调用 optimizePrompt(prompt, style="auto", targetWords=30)
 ### 3.3 enhanceImage（已有图片高清化）
 
 ```
-agent 调用 enhanceImage(inputPath, scale=2, model="realesrgan-x4plus-anime", autoDownload=true)
+agent 调用 enhanceImage(inputPath, scale=2, model="realesr-animevideov3", autoDownload=true)
   │
   ├─ REALESRGAN_PATH 已设置?
   │   └─ YES → 直接使用指定二进制
