@@ -1,0 +1,64 @@
+{
+  "name": "@npm_xiyuan/image-forge-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for Pollinations free-tier image/text generation, transparent assets, background removal, and Real-ESRGAN enhancement",
+  "license": "MIT",
+  "type": "module",
+  "homepage": "https://github.com/jiyi1990118/image-forge-mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jiyi1990118/image-forge-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jiyi1990118/image-forge-mcp/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "README.zh-CN.md",
+    "LICENSE"
+  ],
+  "bin": {
+    "image-forge-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch",
+    "pretest": "npm run build",
+    "test": "node --test"
+  },
+  "keywords": [
+    "mcp",
+    "image-generation",
+    "text-to-image",
+    "text-generation",
+    "pollinations",
+    "real-esrgan",
+    "background-removal",
+    "transparent-background",
+    "game-assets",
+    "image-upscaling",
+    "super-resolution",
+    "model-context-protocol"
+  ],
+  "dependencies": {
+    "@imgly/background-removal-node": "^1.4.5",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "extract-zip": "^2.0.1",
+    "imagemin": "^9.0.1",
+    "imagemin-pngquant": "^10.0.0",
+    "imagemin-zopfli": "^7.0.0",
+    "sharp": "^0.33.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
