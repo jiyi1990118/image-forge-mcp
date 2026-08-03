@@ -1,5 +1,7 @@
 import { writeFile } from 'fs/promises';
 import { join, basename, dirname, extname } from 'path';
+import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
 import sharp from 'sharp';
 import { log } from '../../utils/logger.js';
 
@@ -169,6 +171,20 @@ export async function removeConnectedColorBackground(
 }
 
 /**
+ * Resolve the correct publicPath for @imgly/background-removal-node.
+ *
+ * The package defaults publicPath to `file://{cwd}/node_modules/.../dist/`,
+ * which breaks when the MCP server is launched from a different working directory.
+ * This function uses Node's own module resolution to find the real path.
+ */
+function resolveImglyPublicPath(): string {
+  const require = createRequire(import.meta.url);
+  const mainPath = require.resolve('@imgly/background-removal-node');
+  const distDir = dirname(mainPath);
+  return `file://${distDir}/`;
+}
+
+/**
  * AI 去背景 — 使用 @imgly/background-removal-node
  *
  * 基于 ONNX 运行时，本地执行，无需 API key 或 Python。
@@ -197,7 +213,8 @@ export async function removeBackgroundImage(opts: RemoveBgOptions): Promise<Remo
   }
 
   const { removeBackground } = await import('@imgly/background-removal-node');
-  const blob = await removeBackground(inputPath);
+  const publicPath = resolveImglyPublicPath();
+  const blob = await removeBackground(inputPath, { publicPath });
 
   const buffer = Buffer.from(await blob.arrayBuffer());
   await writeFile(outPath, buffer);

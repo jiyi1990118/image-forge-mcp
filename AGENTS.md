@@ -13,25 +13,24 @@ npm test           # node --test  — unit tests; run npm run build first (tests
 
 There is no lint, separate typecheck, or codegen step. `npm run build` is the compiler check. The MCP client (`~/.config/opencode/opencode.json`) points at `dist/index.js`, so **rebuild after every edit before testing via the client or running tests**.
 
+Before every git commit, bump the npm package version in `package.json` and `package-lock.json`. Use `npm version <new-version> --no-git-tag-version` so the version change is included in the same commit.
+
 ## Real-ESRGAN and generated-image enhancement
 
 `generateImage` defaults to generated-image enhancement with `enhanceBackend='auto'`: try Real-ESRGAN ncnn-vulkan first, auto-download the current-platform portable package on supported environments when missing, and fall back to sharp CPU resize if Real-ESRGAN/Vulkan is unsupported or fails. `realEsrganModel` defaults to `auto`, which selects `realesr-animevideov3` for generated-image enhancement. Explicit model overrides always win. `enhanceImage` remains the standalone existing-local-image Real-ESRGAN tool and still returns image binary plus text; its default model is also `realesr-animevideov3`.
 
 Prompt quality: keep generated-image prompts focused. Prefer one subject, one composition, and one visual mood. Asset/icon/item/sprite/weapon/equipment prompts automatically append complete-object and sharp-edge constraints (`fully visible`, `uncropped`, `clean silhouette`, `sharp outline`, `well-defined edges`) before generation. For developer/workstation scenes, use blurred screens and abstract UI shapes instead of many monitors, detailed code, and many desk props. For transparent assets, prompt a plain white background and use `removeBackground=true`; avoid asking the image model for `transparent background` when quality matters. `noTextConstraint` defaults to true and appends no-text/no-logo/no-watermark guidance; set it to false only when posters, UI screenshots, labels, or text-like content are intentional or when the constraint conflicts with screen/code prompts.
 
-## The 7 tools
+## The 4 tools
 
 | # | Tool | Purpose |
 |---|---|---|
 | 1 | `generateImage` | Text-to-image, save raw + clarity `_processed.png` + enhanced/final PNG, default path response; pass `returnMode: 'binary'` or `'both'` for image content |
 | 2 | `generateImageUrl` | Shareable URL only (no download, no post-processing) |
-| 3 | `enhanceImage` | Real-ESRGAN ncnn-vulkan upscale/enhance an existing local image |
-| 4 | `optimizePrompt` | LLM prompt compression (standalone; autoOptimize also calls it internally) |
-| 5 | `listImageModels` | Hardcoded image model registry |
-| 6 | `listTextModels` | Hardcoded text model registry |
-| 7 | `respondText` | Free LLM text generation |
+| 3 | `listImageModels` | Hardcoded image model registry |
+| 4 | `listTextModels` | Hardcoded text model registry |
 
-`removeBackground` and `convertImage` are **no longer standalone tools** — their capabilities are `generateImage` parameters. `enhanceImage` remains standalone because it operates on existing images and still returns image binary plus text.
+`removeBackground` and `convertImage` are **no longer standalone tools** — their capabilities are `generateImage` parameters. `enhanceImage`, `optimizePrompt`, and `respondText` standalone tools have been removed due to free-tier API unavailability (402) and redundancy with `generateImage`'s built-in `autoOptimize` and enhancement pipeline.
 
 ## generateImage post-processing (the key design)
 
@@ -59,9 +58,9 @@ With defaults, every call produces `<fileName>.<format>` (raw) and an enhanced f
 
 ## Architecture quick map
 
-- `src/index.ts` → `src/server.ts` — entrypoint; MCP Server, 7 tools + 1 prompt registered via `setRequestHandler`
-- `src/schemas/` — `imageSchemas` (generateImage/generateImageUrl), `upscaleSchemas` (enhanceImage), `textSchemas` (optimizePrompt/respondText/listImageModels/listTextModels)
-- `src/tools/` — 4 handler files. `generateImage.ts` (generateImage + generateImageUrl; contains post-processing pipeline + keyword detection), `enhanceImage.ts`, `optimizePrompt.ts`, `textTools.ts` (respondText + listImageModels + listTextModels)
+- `src/index.ts` → `src/server.ts` — entrypoint; MCP Server, 4 tools + 1 prompt registered via `setRequestHandler`
+- `src/schemas/` — `imageSchemas` (generateImage/generateImageUrl), `textSchemas` (listImageModels/listTextModels)
+- `src/tools/` — 2 handler files. `generateImage.ts` (generateImage + generateImageUrl; contains post-processing pipeline + keyword detection), `textTools.ts` (listImageModels + listTextModels)
 - `src/services/`:
   - `pollinations/` — image/text API + client with retry
   - `enhance/` — `clarityService` (median/neural denoise + CLAHE + sharpen pipeline), `denoiseService` (ONNX neural denoise, falls back to median), `backgroundRemovalService` (@imgly ONNX), `compressService` (pngquant/zopfli)
@@ -72,7 +71,7 @@ With defaults, every call produces `<fileName>.<format>` (raw) and an enhanced f
 
 ## Gotchas that cost real time
 
-- **Stdio transport**: `logger.ts` writes to **stderr only**. Never `console.log` to stdout — it corrupts the MCP JSON-RPC stream. New logs go through `log()`.
+- **Stdio transport**: `logger.ts` writes to **stderr only**. Never `console.log` to stdout — it corrupts the MCP JSON-RPC stream. New logs go through `info()`, `warn()`, or `error()`. `info/warn/error` are always visible; `log()` is debug-only (requires `DEBUG=true`).
 - **MCP SDK import paths** use `.js` even in TS (ESM): `@modelcontextprotocol/sdk/server/stdio.js` — not `/stdio.js`, not `.ts`.
 - **sharp 0.33**: `clahe` / `median` / `sharpen` used by `clarityService`. `gamma` is clamped 1.0–3.0 and >1 *darkens*; use `modulate({ brightness })` for bidirectional brightness control.
 - **`@imgly/background-removal-node`** downloads a ~170MB ONNX model on first `removeBackground` run (cached under `node_modules/@imgly/...`). First call ~10-30s. Now triggered via `generateImage`'s `removeBackground` param (or auto keyword).

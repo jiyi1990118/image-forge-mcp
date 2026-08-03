@@ -8,7 +8,6 @@ import {
   checkRealEsrganAvailability,
   ensureRealEsrgan,
 } from '../dist/services/upscale/realesrganService.js';
-import { handleEnhanceImage } from '../dist/tools/enhanceImage.js';
 
 describe('getRealEsrganPackageInfo', () => {
   test('selects Windows package', () => {
@@ -94,13 +93,5 @@ describe('ensureRealEsrgan', () => {
       else process.env.REALESRGAN_CACHE_DIR = oldCache;
       await rm(dir, { recursive: true, force: true });
     }
-  });
-});
-
-describe('handleEnhanceImage', () => {
-  test('rejects missing inputPath', async () => {
-    const res = await handleEnhanceImage({});
-    assert.equal(res.isError, true);
-    assert.match(res.content[0].text, /inputPath is required/);
   });
 });

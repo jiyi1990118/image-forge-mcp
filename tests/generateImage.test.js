@@ -156,7 +156,7 @@ describe('handleGenerateImage returnMode and enhancement pipeline', () => {
         }, null);
 
         assert.match(result.content[0].text, /Enhancement: Real-ESRGAN model: realesr-animevideov3\./);
-        assert.match(result.content[0].text, /Enhanced with (Real-ESRGAN|sharp CPU fallback)/);
+        assert.match(result.content[0].text, /(Enhanced with|used sharp CPU fallback)/);
       });
     } finally {
       await rm(dir, { recursive: true, force: true });

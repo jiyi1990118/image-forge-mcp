@@ -66,10 +66,20 @@ const CHINESE_ORGANIC_TERMS = [
 ];
 
 const NO_TEXT_PROMPT = 'No text, no letters, no words, no readable signs, no logos, no watermark.';
-const ASSET_PROMPT = 'game asset icon, complete object, fully visible, centered, uncropped, clean silhouette, sharp outline, well-defined edges, plain white background.';
+const ASSET_PROMPT_WITHOUT_BG = 'game asset icon, complete object, fully visible, centered, uncropped, clean silhouette, sharp outline, well-defined edges.';
+const ASSET_PROMPT = `${ASSET_PROMPT_WITHOUT_BG} plain white background.`;
 const WEAPON_PROMPT = 'single weapon only, one complete object, no duplicate weapons, no crossed weapons, no extra blade, no extra handle, no scabbard.';
 const BLADED_WEAPON_PROMPT = 'one blade, one handle, straight continuous blade, symmetric weapon silhouette, product view, not a pair.';
 const ORGANIC_PROMPT = 'single organic object, smooth continuous natural shape, seamless stem, no horizontal seam, no ring band, no belt, no mechanical joint, no segmented body.';
+
+const BACKGROUND_COLOR_TERMS = [
+  'background', 'bg', 'transparent',
+  'white background', 'black background', 'blue background', 'red background',
+  'green background', 'gray background', 'grey background', 'dark background',
+  'light background', 'gradient background', 'color background',
+  'plain white', 'plain black', 'solid background',
+  'isolated', 'no background', 'clear background',
+];
 
 function tokenizeEnglish(prompt: string): string[] {
   return prompt.toLowerCase().match(/[a-z0-9]+/g) || [];
@@ -114,7 +124,10 @@ function addNoTextConstraint(prompt: string): string {
 function addAssetConstraint(prompt: string): string {
   if (!shouldUseAssetPipeline(prompt)) return prompt;
 
-  const constraints = [ASSET_PROMPT];
+  const promptLower = prompt.toLowerCase();
+  const hasBackgroundColor = BACKGROUND_COLOR_TERMS.some((term) => promptLower.includes(term));
+
+  const constraints = [hasBackgroundColor ? ASSET_PROMPT_WITHOUT_BG : ASSET_PROMPT];
   if (isWeaponAssetPrompt(prompt)) constraints.push(WEAPON_PROMPT);
   if (isBladedWeaponPrompt(prompt)) constraints.push(BLADED_WEAPON_PROMPT);
   if (isOrganicAssetPrompt(prompt)) constraints.push(ORGANIC_PROMPT);

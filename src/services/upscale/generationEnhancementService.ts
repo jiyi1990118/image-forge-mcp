@@ -1,5 +1,6 @@
-import { enhanceWithRealEsrgan, type RealEsrganModel } from './realesrganService.js';
+import { enhanceWithRealEsrgan, type RealEsrganModel, checkRealEsrganAvailability } from './realesrganService.js';
 import { upscaleWithSharpFallback } from './fallbackUpscaleService.js';
+import { log, warn } from '../../utils/logger.js';
 
 export type EnhancementBackend = 'auto' | 'realesrgan' | 'sharp' | 'none';
 export type EnhancementFallback = 'sharp' | 'none';
@@ -24,6 +25,19 @@ export interface EnhanceGeneratedImageResult {
   scale: number;
   message: string;
   binaryPath?: string;
+}
+
+let realEsrganAvailable: boolean | null = null;
+
+async function isRealEsrganActuallyAvailable(): Promise<boolean> {
+  if (realEsrganAvailable !== null) return realEsrganAvailable;
+  log('Checking Real-ESRGAN availability...');
+  const status = await checkRealEsrganAvailability({ autoDownload: false });
+  realEsrganAvailable = status.available;
+  if (!status.available) {
+    warn(`Real-ESRGAN not available (will use sharp fallback): ${status.reason || 'unknown'}`);
+  }
+  return realEsrganAvailable;
 }
 
 export async function enhanceGeneratedImage(
@@ -56,6 +70,26 @@ export async function enhanceGeneratedImage(
     };
   }
 
+  if (options.backend === 'auto') {
+    const available = await isRealEsrganActuallyAvailable();
+    if (!available) {
+      warn('Real-ESRGAN unavailable (cached), skipping to sharp fallback...');
+      const result = await upscaleWithSharpFallback({
+        inputPath: options.inputPath,
+        outputPath: options.outputPath,
+        scale: options.scale,
+      });
+      return {
+        inputPath: result.inputPath,
+        outputPath: result.outputPath,
+        backendUsed: 'sharp',
+        fallbackUsed: true,
+        scale: result.scale,
+        message: 'Real-ESRGAN unavailable (cached); used sharp CPU fallback.',
+      };
+    }
+  }
+
   try {
     const result = await enhanceWithRealEsrgan({
       inputPath: options.inputPath,
@@ -75,6 +109,7 @@ export async function enhanceGeneratedImage(
       binaryPath: result.binaryPath,
     };
   } catch (error) {
+    realEsrganAvailable = false;
     if (options.backend === 'realesrgan' || options.fallback !== 'sharp') {
       throw error;
     }

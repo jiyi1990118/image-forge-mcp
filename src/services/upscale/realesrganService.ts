@@ -260,12 +260,26 @@ export async function checkRealEsrganAvailability(
 
   try {
     const ensured = await ensureRealEsrgan(autoDownload);
+    const binaryPath = ensured.binaryPath;
+
+    const versionOk = await quickValidateBinary(binaryPath);
+    if (!versionOk) {
+      return {
+        supportedPlatform: true,
+        binaryAvailable: true,
+        binaryPath,
+        downloaded: ensured.downloaded,
+        vulkanLikelyAvailable: false,
+        available: false,
+        reason: 'Real-ESRGAN binary exists but failed quick validation (no Vulkan support or missing GPU driver)',
+      };
+    }
+
     return {
       supportedPlatform: true,
       binaryAvailable: true,
-      binaryPath: ensured.binaryPath,
+      binaryPath,
       downloaded: ensured.downloaded,
-      // Real Vulkan support is ultimately verified by running the binary.
       vulkanLikelyAvailable: true,
       available: true,
     };
@@ -278,6 +292,19 @@ export async function checkRealEsrganAvailability(
       available: false,
       reason: error instanceof Error ? error.message : String(error),
     };
+  }
+}
+
+/**
+ * Quick validation: run `realesrgan-ncnn-vulkan --version` to verify the binary
+ * actually works (Vulkan driver available). Uses a short 5s timeout.
+ */
+async function quickValidateBinary(binaryPath: string): Promise<boolean> {
+  try {
+    await runProcess(binaryPath, ['--version'], dirname(binaryPath), 5000);
+    return true;
+  } catch {
+    return false;
   }
 }
 

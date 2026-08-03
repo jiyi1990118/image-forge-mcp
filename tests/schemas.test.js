@@ -3,29 +3,28 @@ import assert from 'node:assert/strict';
 import { getAllToolSchemas } from '../dist/schemas/index.js';
 
 describe('schema registry', () => {
-  test('registers exactly 7 tools', () => {
+  test('registers exactly 4 tools', () => {
     const schemas = getAllToolSchemas();
-    assert.equal(schemas.length, 7);
+    assert.equal(schemas.length, 4);
   });
 
-  test('tool set matches the documented 7-tool design', () => {
+  test('tool set is generateImage, generateImageUrl, listImageModels, listTextModels', () => {
     const names = getAllToolSchemas().map((s) => s.name);
     assert.deepEqual(names, [
       'generateImage',
       'generateImageUrl',
-      'enhanceImage',
-      'optimizePrompt',
       'listImageModels',
       'listTextModels',
-      'respondText',
     ]);
   });
 
-  test('removed standalone tools are absent', () => {
+  test('removed tools are absent', () => {
     const names = getAllToolSchemas().map((s) => s.name);
-    assert.ok(!names.includes('removeBackground'), 'removeBackground tool should be removed (now a generateImage param)');
-    assert.ok(!names.includes('convertImage'), 'convertImage tool should be removed (now generateImage params)');
-    assert.ok(!names.includes('generateImageHD'), 'generateImageHD should be removed');
+    assert.ok(!names.includes('enhanceImage'), 'enhanceImage tool should be removed');
+    assert.ok(!names.includes('optimizePrompt'), 'optimizePrompt tool should be removed');
+    assert.ok(!names.includes('respondText'), 'respondText tool should be removed');
+    assert.ok(!names.includes('removeBackground'), 'removeBackground tool should be removed');
+    assert.ok(!names.includes('convertImage'), 'convertImage tool should be removed');
   });
 
   test('every schema declares a valid inputSchema object', () => {
@@ -75,17 +74,14 @@ describe('schema registry', () => {
   test('generateImage description documents default enhancement and path return behavior', () => {
     const s = getAllToolSchemas().find((x) => x.name === 'generateImage');
     assert.match(s.description, /raw generation/i);
-    assert.match(s.description, /Real-ESRGAN when available/i);
-    assert.match(s.description, /sharp CPU fallback/i);
-    assert.match(s.description, /optional background removal/i);
+    assert.match(s.description, /Real-ESRGAN/i);
+    assert.match(s.description, /sharp CPU/i);
+    assert.match(s.description, /background removal/i);
     assert.match(s.description, /PNG compression/i);
-    assert.match(s.description, /returns paths unless returnMode requests binary/i);
-    assert.match(s.description, /raw generated image/i);
-    assert.match(s.description, /clarity processed PNG/i);
-    assert.match(s.description, /enhanced final PNG/i);
-    assert.match(s.description, /background removal is enabled, it runs after enhancement/i);
-    assert.doesNotMatch(s.description, /TWO files/i);
-    assert.doesNotMatch(s.description, /transparent _processed\.png/i);
+    assert.match(s.description, /returnMode=binary/i);
+    assert.match(s.description, /raw image/i);
+    assert.match(s.description, /_processed\.png/i);
+    assert.match(s.description, /_enhanced\.png/i);
   });
 
   test('generateImage schema documents enhancement precedence and fallback semantics', () => {
@@ -97,60 +93,32 @@ describe('schema registry', () => {
       p.enhanceBackend.description,
       p.enhanceFallback.description,
     ].join('\n');
-    assert.match(enhancementDocs, /realEsrgan=false disables generated-image enhancement regardless of enhanceBackend/i);
-    assert.match(enhancementDocs, /enhanceBackend='none' also disables generated-image enhancement/i);
-    assert.match(enhancementDocs, /enhanceBackend='auto' tries Real-ESRGAN first, then uses enhanceFallback/i);
-    assert.match(enhancementDocs, /enhanceFallback='sharp' uses CPU sharp fallback/i);
-    assert.match(enhancementDocs, /enhanceFallback='none' returns or propagates the Real-ESRGAN error/i);
-    assert.match(enhancementDocs, /enhanceBackend='realesrgan' does not silently fallback/i);
+    assert.match(enhancementDocs, /realEsrgan=false disables/i);
+    assert.match(enhancementDocs, /auto=tries Real-ESRGAN first/i);
+    assert.match(enhancementDocs, /falls back to sharp/i);
+    assert.match(enhancementDocs, /realesrgan=no fallback/i);
+    assert.match(enhancementDocs, /none=surface error/i);
   });
 
   test('generateImage schema documents auto Real-ESRGAN model selection', () => {
     const s = getAllToolSchemas().find((x) => x.name === 'generateImage');
     const p = s.inputSchema.properties;
     const docs = `${s.description}\n${p.realEsrganModel.description}`;
-    assert.match(docs, /realEsrganModel: enum \(optional, default: auto\)/i);
-    assert.match(docs, /auto\|realesrgan-x4plus\|realesrgan-x4plus-anime\|realesr-animevideov3/i);
-    assert.match(docs, /auto selects realesr-animevideov3/i);
-    assert.match(docs, /Explicit model values override auto selection/i);
-    assert.match(docs, /use realesrgan-x4plus or realesrgan-x4plus-anime only when explicitly requested/i);
+    assert.match(docs, /auto=realesr-animevideov3/i);
+    assert.match(docs, /Explicit overrides auto/i);
   });
 
   test('generateImage schema documents automatic asset prompt constraints', () => {
     const s = getAllToolSchemas().find((x) => x.name === 'generateImage');
-    assert.match(s.description, /asset\/icon\/item\/sprite\/weapon\/equipment prompts automatically add complete-object and sharp-edge generation constraints/i);
-    assert.match(s.description, /Weapon and sword prompts add single-subject constraints/i);
-    assert.match(s.description, /Organic and plant prompts add seamless natural-shape constraints/i);
-    assert.match(s.description, /fully visible/i);
-    assert.match(s.description, /well-defined edges/i);
+    assert.match(s.description, /asset keywords/i);
+    assert.match(s.description, /trigger auto-constraints/i);
+    assert.match(s.description, /icon, asset, weapon/i);
   });
 
-  test('optimizePrompt schema requires prompt and exposes style/targetWords', () => {
-    const s = getAllToolSchemas().find((x) => x.name === 'optimizePrompt');
-    assert.ok(s.inputSchema.required.includes('prompt'));
-    assert.deepEqual(s.inputSchema.properties.style.enum, [
-      'auto', 'realistic', 'anime', 'painting', 'scifi', 'portrait',
-    ]);
-    assert.equal(s.inputSchema.properties.targetWords.default, 30);
-  });
-
-  test('enhanceImage schema exposes Real-ESRGAN defaults', () => {
-    const s = getAllToolSchemas().find((x) => x.name === 'enhanceImage');
-    assert.ok(s.inputSchema.required.includes('inputPath'));
-    assert.equal(s.inputSchema.properties.model.default, 'realesr-animevideov3');
-    assert.deepEqual(s.inputSchema.properties.model.enum, [
-      'realesrgan-x4plus', 'realesrgan-x4plus-anime', 'realesr-animevideov3',
-    ]);
-    assert.equal(s.inputSchema.properties.scale.default, 2);
-    assert.deepEqual(s.inputSchema.properties.scale.enum, [2, 3, 4]);
-    assert.equal(s.inputSchema.properties.autoDownload.default, true);
-    assert.equal(s.inputSchema.properties.removeBackground.default, false);
-  });
-
-  test('enhanceImage schema documents actual Real-ESRGAN cache location', () => {
-    const s = getAllToolSchemas().find((x) => x.name === 'enhanceImage');
-    assert.match(s.description, /\.cache\/realesrgan\/v0\.2\.5\.0\/<platform>/);
-    assert.match(s.description, /REALESRGAN_CACHE_DIR overrides the cache root/);
-    assert.doesNotMatch(s.description, /~\/\.cache\/vision-mcp/);
+  test('generateImage description includes free tier warning', () => {
+    const s = getAllToolSchemas().find((x) => x.name === 'generateImage');
+    assert.match(s.description, /FREE TIER/i);
+    assert.match(s.description, /768px/i);
+    assert.match(s.description, /ONE clear subject/i);
   });
 });
