@@ -396,3 +396,112 @@ describe('handleGenerateImage returnMode and enhancement pipeline', () => {
     }
   });
 });
+
+describe('handleGenerateImage input validation', () => {
+  test('sanitizes fileName to prevent path traversal', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'vision-generate-handler-'));
+    try {
+      await withStubbedFetch(async () => {
+        const result = await handleGenerateImage({
+          prompt: 'traversal test',
+          autoOptimize: false,
+          outputPath: dir,
+          fileName: '../../../etc/passwd',
+          realEsrgan: false,
+          compress: false,
+          returnMode: 'path',
+        }, null);
+
+        assert.equal(result.isError, undefined);
+        assert.doesNotMatch(result.content[0].text, /\.\.\//);
+        assert.doesNotMatch(result.content[0].text, /etc\/passwd/);
+        assert.match(result.content[0].text, /Raw image saved to:/);
+      });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('clamps width and height to [64, 2048]', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'vision-generate-handler-'));
+    try {
+      await withStubbedFetch(async () => {
+        const result = await handleGenerateImage({
+          prompt: 'clamp test',
+          autoOptimize: false,
+          outputPath: dir,
+          fileName: 'clamp',
+          width: 99999,
+          height: 1,
+          realEsrgan: false,
+          compress: false,
+          returnMode: 'path',
+        }, null);
+
+        assert.match(result.content[0].text, /"width": 2048/);
+        assert.match(result.content[0].text, /"height": 64/);
+      });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('clamps realEsrganTimeoutMs to [10000, 600000]', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'vision-generate-handler-'));
+    try {
+      await withStubbedFetch(async () => {
+        const result = await handleGenerateImage({
+          prompt: 'timeout clamp',
+          autoOptimize: false,
+          outputPath: dir,
+          fileName: 'timeout',
+          enhanceBackend: 'sharp',
+          realEsrganTimeoutMs: 1,
+          compress: false,
+          returnMode: 'path',
+        }, null);
+
+        assert.equal(result.isError, undefined);
+        assert.match(result.content[0].text, /Enhanced with sharp CPU fallback/);
+      });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('handleGenerateImage partial failure', () => {
+  test('returns raw path and error when post-processing fails', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'vision-generate-handler-'));
+    const oldFetch = globalThis.fetch;
+    const oldRealesrganPath = process.env.REALESRGAN_PATH;
+    const png = await sharp({ create: { width: 4, height: 3, channels: 4, background: '#336699ff' } })
+      .png()
+      .toBuffer();
+    globalThis.fetch = async () => new Response(png, { headers: { 'content-type': 'image/png' } });
+    process.env.REALESRGAN_PATH = `/nonexistent/binary-${Date.now()}`;
+
+    try {
+      const result = await handleGenerateImage({
+        prompt: 'partial failure test',
+        autoOptimize: false,
+        outputPath: dir,
+        fileName: 'partial',
+        enhanceBackend: 'realesrgan',
+        enhanceFallback: 'none',
+        compress: false,
+        returnMode: 'path',
+      }, null);
+
+      assert.equal(result.isError, true);
+      assert.match(result.content[0].text, /Post-processing failed/);
+      assert.match(result.content[0].text, /Raw image saved to:/);
+      assert.match(result.content[0].text, /Failed:/);
+    } finally {
+      globalThis.fetch = oldFetch;
+      if (oldRealesrganPath === undefined) delete process.env.REALESRGAN_PATH;
+      else process.env.REALESRGAN_PATH = oldRealesrganPath;
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});

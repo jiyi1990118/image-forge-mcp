@@ -5,6 +5,35 @@ import { generateFileName, uniqueFilePath, randomSeed } from '../../utils/fileUt
 import { log } from '../../utils/logger.js';
 import { DEFAULTS } from '../../config/constants.js';
 
+const IMAGE_SIGNATURES: Array<{ name: string; offset: number; bytes: number[] }> = [
+  { name: 'png', offset: 0, bytes: [0x89, 0x50, 0x4e, 0x47] },
+  { name: 'jpeg', offset: 0, bytes: [0xff, 0xd8, 0xff] },
+  { name: 'gif', offset: 0, bytes: [0x47, 0x49, 0x46, 0x38] },
+  { name: 'webp', offset: 0, bytes: [0x52, 0x49, 0x46, 0x46] },
+];
+
+function detectImageFormat(buffer: Buffer): string | null {
+  for (const sig of IMAGE_SIGNATURES) {
+    if (buffer.length < sig.offset + sig.bytes.length) continue;
+    let match = true;
+    for (let i = 0; i < sig.bytes.length; i++) {
+      if (buffer[sig.offset + i] !== sig.bytes[i]) {
+        match = false;
+        break;
+      }
+    }
+    if (match) {
+      if (sig.name === 'webp' && buffer.length >= 12) {
+        const riff = buffer.slice(8, 12).toString('ascii');
+        if (riff === 'WEBP') return 'webp';
+        continue;
+      }
+      return sig.name;
+    }
+  }
+  return null;
+}
+
 export interface GenerateImageOptions {
   prompt: string;
   model?: string;
@@ -55,8 +84,18 @@ export async function generateImage(opts: GenerateImageOptions): Promise<Generat
   const response = await fetchWithAuth(url, authConfig);
   const imageBuffer = await response.arrayBuffer();
   const buffer = Buffer.from(imageBuffer);
+
+  const detectedFormat = detectImageFormat(buffer);
+  if (!detectedFormat) {
+    const bodyPreview = buffer.toString('utf8', 0, Math.min(buffer.length, 200));
+    throw new Error(
+      `Pollinations returned a non-image response (content-type: ${response.headers.get('content-type') || 'unknown'}). ` +
+      `First 200 chars: ${bodyPreview}`
+    );
+  }
+
   const base64Data = includeData ? buffer.toString('base64') : undefined;
-  const contentType = response.headers.get('content-type') || 'image/png';
+  const contentType = response.headers.get('content-type') || `image/${detectedFormat}`;
 
   const finalFileName = generateFileName(prompt, fileName, format);
   const filePath = uniqueFilePath(outputPath, finalFileName);

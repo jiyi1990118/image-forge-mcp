@@ -10,7 +10,7 @@ import { selectRealEsrganModel } from '../services/upscale/modelSelectionService
 import { DEFAULTS } from '../config/constants.js';
 import { randomSeed } from '../utils/fileUtils.js';
 import { noBackgroundOutputPath } from '../utils/pathUtils.js';
-import { log } from '../utils/logger.js';
+import { log, error } from '../utils/logger.js';
 import type { AuthConfig } from '../services/pollinations/client.js';
 
 const ENGLISH_ASSET_TERMS = [
@@ -166,6 +166,14 @@ function parseEnhanceFallback(value: unknown): EnhancementFallback {
   return value === 'none' ? 'none' : 'sharp';
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function sanitizeFileName(name: string): string {
+  return name.replace(/[/\\]/g, '').replace(/^\.+/, '');
+}
+
 export async function handleGenerateImage(
   args: Record<string, unknown>,
   authConfig: AuthConfig | null
@@ -200,12 +208,12 @@ export async function handleGenerateImage(
     prompt: generationPrompt,
     model: selectImageModel(prompt, args.model),
     seed: args.seed ? Number(args.seed) : randomSeed(),
-    width: args.width ? Number(args.width) : DEFAULTS.IMAGE_WIDTH,
-    height: args.height ? Number(args.height) : DEFAULTS.IMAGE_HEIGHT,
+    width: args.width ? clamp(Math.floor(Number(args.width)), 64, 2048) : DEFAULTS.IMAGE_WIDTH,
+    height: args.height ? clamp(Math.floor(Number(args.height)), 64, 2048) : DEFAULTS.IMAGE_HEIGHT,
     enhance: args.enhance !== undefined ? args.enhance === true : DEFAULTS.IMAGE_ENHANCE,
     safe: args.safe !== undefined ? args.safe === true : DEFAULTS.IMAGE_SAFE,
     outputPath: args.outputPath ? String(args.outputPath) : DEFAULTS.OUTPUT_DIR,
-    fileName: args.fileName ? String(args.fileName) : undefined,
+    fileName: args.fileName ? sanitizeFileName(String(args.fileName)) || undefined : undefined,
     format: args.format ? String(args.format) : 'png',
     includeData: returnMode !== 'path',
     authConfig,
@@ -215,7 +223,7 @@ export async function handleGenerateImage(
 
   const denoise = args.denoise !== undefined ? args.denoise !== false : DEFAULT_CLARITY.denoise;
   const denoiseMethod: 'median' | 'neural' = args.denoiseMethod === 'neural' ? 'neural' : 'median';
-  const denoiseRadius = args.denoiseRadius ? Number(args.denoiseRadius) : DEFAULT_CLARITY.denoiseRadius;
+  const denoiseRadius = args.denoiseRadius ? clamp(Math.floor(Number(args.denoiseRadius)), 1, 3) : DEFAULT_CLARITY.denoiseRadius;
   const sharpen = args.sharpen === true;
   const enhanceContrast = args.enhanceContrast === true;
   const realEsrgan = args.realEsrgan !== undefined ? args.realEsrgan !== false : true;
@@ -225,7 +233,7 @@ export async function handleGenerateImage(
   const realEsrganModel = selectRealEsrganModel(prompt, requestedRealEsrganModel);
   const realEsrganScale = parseScale(args.realEsrganScale);
   const realEsrganAutoDownload = args.realEsrganAutoDownload !== undefined ? args.realEsrganAutoDownload !== false : true;
-  const realEsrganTimeoutMs = args.realEsrganTimeoutMs ? Number(args.realEsrganTimeoutMs) : 120000;
+  const realEsrganTimeoutMs = args.realEsrganTimeoutMs ? clamp(Math.floor(Number(args.realEsrganTimeoutMs)), 10000, 600000) : 120000;
 
   let removeBackground: boolean;
   if (args.removeBackground !== undefined) {
@@ -245,59 +253,81 @@ export async function handleGenerateImage(
   let processingInfo = '';
   let mimeType = result.mimeType;
 
-  if (clarityActive) {
-    processedPath = join(dir, `${base}_processed.png`);
-    finalPath = processedPath;
-    mimeType = 'image/png';
+  try {
+    if (clarityActive) {
+      processedPath = join(dir, `${base}_processed.png`);
+      finalPath = processedPath;
+      mimeType = 'image/png';
 
-    log('Applying clarity pipeline...');
-    const clarityRes = await applyClarity(rawPath, processedPath, {
-      denoise,
-      denoiseMethod,
-      denoiseRadius,
-      sharpen,
-      enhanceContrast,
-    });
-    processingInfo += `\nClarity: ${clarityRes.steps.join(' + ') || 'none'}${clarityRes.denoiseFallback ? ' (neural fallback to median)' : ''}`;
-  }
-
-  if (realEsrgan && enhanceBackend !== 'none') {
-    enhancementPath = join(dir, `${base}_enhanced.png`);
-    const enhancement = await enhanceGeneratedImage({
-      inputPath: finalPath,
-      outputPath: enhancementPath,
-      enabled: true,
-      backend: enhanceBackend,
-      fallback: enhanceFallback,
-      model: realEsrganModel,
-      scale: realEsrganScale,
-      autoDownload: realEsrganAutoDownload,
-      timeoutMs: realEsrganTimeoutMs,
-    });
-    finalPath = enhancement.outputPath;
-    mimeType = 'image/png';
-    processingInfo += `\nEnhancement: Real-ESRGAN model: ${realEsrganModel}. ${enhancement.message}`;
-    if (enhancement.binaryPath) {
-      processingInfo += `\nReal-ESRGAN binary: ${enhancement.binaryPath}`;
+      log('Applying clarity pipeline...');
+      const clarityRes = await applyClarity(rawPath, processedPath, {
+        denoise,
+        denoiseMethod,
+        denoiseRadius,
+        sharpen,
+        enhanceContrast,
+      });
+      processingInfo += `\nClarity: ${clarityRes.steps.join(' + ') || 'none'}${clarityRes.denoiseFallback ? ' (neural fallback to median)' : ''}`;
     }
-  }
 
-  if (removeBackground) {
-    const bgOutputPath = noBackgroundOutputPath(finalPath);
-    log('Removing background...');
-    const bgRes = await removeBackgroundImage({ inputPath: finalPath, outputPath: bgOutputPath, strategy: removeBackgroundStrategy });
-    finalPath = bgRes.outputPath;
-    mimeType = 'image/png';
-    processingInfo += `\nBackground removed: ${bgRes.modelUsed} (${bgRes.strategy})`;
-  }
-
-  if (args.compress !== false && finalPath.endsWith('.png')) {
-    const compressResult = await compressImage(finalPath);
-    if (compressResult.compressed) {
-      processingInfo += `\nCompression: ${formatBytes(compressResult.originalSize)} -> ${formatBytes(compressResult.compressedSize)}`;
-    } else {
-      processingInfo += `\nCompression: skipped (${formatBytes(compressResult.originalSize)})`;
+    if (realEsrgan && enhanceBackend !== 'none') {
+      enhancementPath = join(dir, `${base}_enhanced.png`);
+      const enhancement = await enhanceGeneratedImage({
+        inputPath: finalPath,
+        outputPath: enhancementPath,
+        enabled: true,
+        backend: enhanceBackend,
+        fallback: enhanceFallback,
+        model: realEsrganModel,
+        scale: realEsrganScale,
+        autoDownload: realEsrganAutoDownload,
+        timeoutMs: realEsrganTimeoutMs,
+      });
+      finalPath = enhancement.outputPath;
+      mimeType = 'image/png';
+      processingInfo += `\nEnhancement: Real-ESRGAN model: ${realEsrganModel}. ${enhancement.message}`;
+      if (enhancement.binaryPath) {
+        processingInfo += `\nReal-ESRGAN binary: ${enhancement.binaryPath}`;
+      }
     }
+
+    if (removeBackground) {
+      const bgOutputPath = noBackgroundOutputPath(finalPath);
+      log('Removing background...');
+      const bgRes = await removeBackgroundImage({ inputPath: finalPath, outputPath: bgOutputPath, strategy: removeBackgroundStrategy });
+      finalPath = bgRes.outputPath;
+      mimeType = 'image/png';
+      processingInfo += `\nBackground removed: ${bgRes.modelUsed} (${bgRes.strategy})`;
+    }
+
+    if (args.compress !== false && finalPath.endsWith('.png')) {
+      const compressResult = await compressImage(finalPath);
+      if (compressResult.warning) {
+        processingInfo += `\nCompression warning: ${compressResult.warning}`;
+      } else if (compressResult.compressed) {
+        processingInfo += `\nCompression: ${formatBytes(compressResult.originalSize)} -> ${formatBytes(compressResult.compressedSize)}`;
+      } else {
+        processingInfo += `\nCompression: skipped (${formatBytes(compressResult.originalSize)})`;
+      }
+    }
+  } catch (postError) {
+    const errorMsg = postError instanceof Error ? postError.message : String(postError);
+    error('Post-processing failed:', errorMsg);
+
+    const partialContent: Array<{ type: string; data?: string; mimeType?: string; text: string }> = [];
+    if (returnMode === 'binary' || returnMode === 'both') {
+      partialContent.push({ type: 'image', data: readFileSync(rawPath).toString('base64'), mimeType: result.mimeType, text: '' });
+    }
+
+    let partialText = `Post-processing failed. Raw image saved to: ${rawPath}`;
+    if (optimizedFrom) {
+      partialText += `\n\nOptimized from original: "${optimizedFrom}"`;
+    }
+    partialText += `\n\nCompleted steps:${processingInfo || ' (none)'}`;
+    partialText += `\n\nFailed: ${errorMsg}`;
+    partialContent.push({ type: 'text', text: partialText });
+
+    return { content: partialContent, isError: true };
   }
 
   const content: Array<{ type: string; data?: string; mimeType?: string; text: string }> = [];

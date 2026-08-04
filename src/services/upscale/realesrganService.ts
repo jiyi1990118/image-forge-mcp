@@ -125,14 +125,63 @@ async function findBinary(dir: string, binaryName: string): Promise<string | nul
   return null;
 }
 
+const DOWNLOAD_RETRYABLE_STATUS = new Set([408, 429, 500, 502, 503, 504, 520, 521, 522, 524]);
+
 async function downloadFile(url: string, outputPath: string): Promise<void> {
-  log(`Downloading Real-ESRGAN: ${url}`);
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to download Real-ESRGAN (${response.status} ${response.statusText})`);
+  const maxRetries = 2;
+  const baseDelay = 2000;
+  const maxDelay = 10000;
+  const timeoutMs = 120000;
+
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    if (attempt > 0) {
+      const delay = Math.min(baseDelay * Math.pow(2, attempt - 1), maxDelay);
+      log(`Retrying download in ${Math.round(delay / 1000)}s (attempt ${attempt}/${maxRetries})...`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+
+    log(`Downloading Real-ESRGAN${attempt > 0 ? ` (attempt ${attempt}/${maxRetries})` : ''}: ${url}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    let response: Response;
+    try {
+      response = await fetch(url, { signal: controller.signal });
+    } catch (err) {
+      clearTimeout(timeoutId);
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt === maxRetries) break;
+      continue;
+    }
+
+    if (!response.ok) {
+      clearTimeout(timeoutId);
+      const statusError = new Error(`HTTP ${response.status} ${response.statusText}`);
+      if (!DOWNLOAD_RETRYABLE_STATUS.has(response.status)) {
+        throw statusError;
+      }
+      lastError = statusError;
+      if (attempt === maxRetries) break;
+      continue;
+    }
+
+    try {
+      const buffer = Buffer.from(await response.arrayBuffer());
+      clearTimeout(timeoutId);
+      await writeFile(outputPath, buffer);
+      return;
+    } catch (err) {
+      clearTimeout(timeoutId);
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt === maxRetries) break;
+    }
   }
-  const buffer = Buffer.from(await response.arrayBuffer());
-  await writeFile(outputPath, buffer);
+
+  throw new Error(
+    `Failed to download Real-ESRGAN after ${maxRetries + 1} attempts: ${lastError?.message || 'unknown'}`
+  );
 }
 
 export async function ensureRealEsrgan(autoDownload: boolean): Promise<{ binaryPath: string; downloaded: boolean }> {
@@ -262,19 +311,6 @@ export async function checkRealEsrganAvailability(
     const ensured = await ensureRealEsrgan(autoDownload);
     const binaryPath = ensured.binaryPath;
 
-    const versionOk = await quickValidateBinary(binaryPath);
-    if (!versionOk) {
-      return {
-        supportedPlatform: true,
-        binaryAvailable: true,
-        binaryPath,
-        downloaded: ensured.downloaded,
-        vulkanLikelyAvailable: false,
-        available: false,
-        reason: 'Real-ESRGAN binary exists but failed quick validation (no Vulkan support or missing GPU driver)',
-      };
-    }
-
     return {
       supportedPlatform: true,
       binaryAvailable: true,
@@ -292,19 +328,6 @@ export async function checkRealEsrganAvailability(
       available: false,
       reason: error instanceof Error ? error.message : String(error),
     };
-  }
-}
-
-/**
- * Quick validation: run `realesrgan-ncnn-vulkan --version` to verify the binary
- * actually works (Vulkan driver available). Uses a short 5s timeout.
- */
-async function quickValidateBinary(binaryPath: string): Promise<boolean> {
-  try {
-    await runProcess(binaryPath, ['--version'], dirname(binaryPath), 5000);
-    return true;
-  } catch {
-    return false;
   }
 }
 

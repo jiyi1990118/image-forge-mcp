@@ -1,6 +1,6 @@
 import { mkdtemp, rm, rename, stat } from 'fs/promises';
 import { join, basename, dirname } from 'path';
-import { log } from '../../utils/logger.js';
+import { log, warn } from '../../utils/logger.js';
 
 export interface CompressOptions {
   quality?: [number, number];
@@ -12,6 +12,7 @@ export interface CompressResult {
   originalSize: number;
   compressedSize: number;
   compressed: boolean;
+  warning?: string;
 }
 
 export function formatBytes(bytes: number): string {
@@ -63,9 +64,9 @@ export async function compressImage(
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    log(`Compression failed: ${fileName} - ${message}`);
+    warn(`Compression failed: ${fileName} - ${message}`);
     const size = (await stat(inputPath)).size;
-    return { outputPath: inputPath, originalSize: size, compressedSize: size, compressed: false };
+    return { outputPath: inputPath, originalSize: size, compressedSize: size, compressed: false, warning: `Compression failed: ${message}` };
   } finally {
     await rm(tempDir, { recursive: true, force: true }).catch(() => {});
   }

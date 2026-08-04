@@ -58,3 +58,55 @@ describe('generateImage includeData', () => {
     }
   });
 });
+
+describe('generateImage content-type validation', () => {
+  test('throws on non-image response (HTML error page) without writing a file', async () => {
+    const oldFetch = globalThis.fetch;
+    const dir = await mkdtemp(join(tmpdir(), 'vision-image-service-'));
+    const htmlBody = '<html><body>500 Internal Server Error</body></html>';
+    globalThis.fetch = async () =>
+      new Response(htmlBody, { headers: { 'content-type': 'text/html' } });
+
+    try {
+      await assert.rejects(
+        generateImage({
+          prompt: 'bad response test',
+          outputPath: dir,
+          fileName: 'should-not-exist',
+          includeData: false,
+        }),
+        /non-image response/i
+      );
+      const { readdir } = await import('node:fs/promises');
+      const files = await readdir(dir);
+      assert.equal(files.length, 0, 'no file should be written for a non-image response');
+    } finally {
+      globalThis.fetch = oldFetch;
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('accepts JPEG magic bytes', async () => {
+    const oldFetch = globalThis.fetch;
+    const dir = await mkdtemp(join(tmpdir(), 'vision-image-service-'));
+    const jpegBytes = Buffer.from([
+      0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
+    ]);
+    globalThis.fetch = async () =>
+      new Response(jpegBytes, { headers: { 'content-type': 'image/jpeg' } });
+
+    try {
+      const result = await generateImage({
+        prompt: 'jpeg test',
+        outputPath: dir,
+        fileName: 'jpeg-test',
+        format: 'jpg',
+        includeData: false,
+      });
+      assert.equal(result.filePath.endsWith('.jpg'), true);
+    } finally {
+      globalThis.fetch = oldFetch;
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});

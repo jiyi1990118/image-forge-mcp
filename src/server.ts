@@ -8,17 +8,22 @@ import {
   ErrorCode,
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
+import { createRequire } from 'module';
 import { getAllToolSchemas } from './schemas/index.js';
 import { handleGenerateImage, handleGenerateImageUrl } from './tools/generateImage.js';
 import { handleListImageModels, handleListTextModels } from './tools/textTools.js';
 import { imagePromptGuide } from './prompts/imagePromptGuide.js';
 import { info, error } from './utils/logger.js';
 
+const require = createRequire(import.meta.url);
+const packageJson = require('../package.json') as { version: string };
+export const SERVER_VERSION = packageJson.version;
+
 const authConfig = null;
 
 export function createServer(): Server {
   const server = new Server(
-    { name: 'image-forge-mcp', version: '0.2.0' },
+    { name: 'image-forge-mcp', version: SERVER_VERSION },
     { capabilities: { tools: {}, prompts: {} } }
   );
 

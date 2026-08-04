@@ -30,4 +30,17 @@ describe('compressImage', () => {
       await rm(dir, { recursive: true, force: true });
     }
   });
+
+  test('skips non-PNG files without warning', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'vision-compress-'));
+    try {
+      const inputPath = join(dir, 'input.jpg');
+      await writeFile(inputPath, Buffer.from([0xff, 0xd8, 0xff, 0xe0]));
+      const result = await compressImage(inputPath);
+      assert.equal(result.compressed, false);
+      assert.equal(result.warning, undefined);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
 });

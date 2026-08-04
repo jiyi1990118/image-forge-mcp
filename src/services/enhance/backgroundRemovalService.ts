@@ -184,6 +184,13 @@ function resolveImglyPublicPath(): string {
   return `file://${distDir}/`;
 }
 
+function getBgRemovalTimeoutMs(): number {
+  const env = process.env.BG_REMOVAL_TIMEOUT_MS;
+  if (env === undefined) return 300000;
+  const parsed = Number(env);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 300000;
+}
+
 /**
  * AI 去背景 — 使用 @imgly/background-removal-node
  *
@@ -214,7 +221,17 @@ export async function removeBackgroundImage(opts: RemoveBgOptions): Promise<Remo
 
   const { removeBackground } = await import('@imgly/background-removal-node');
   const publicPath = resolveImglyPublicPath();
-  const blob = await removeBackground(inputPath, { publicPath });
+  const timeoutMs = getBgRemovalTimeoutMs();
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(
+      () => reject(new Error(`Background removal timed out after ${Math.round(timeoutMs / 1000)}s`)),
+      timeoutMs
+    );
+  });
+  const blob = await Promise.race([
+    removeBackground(inputPath, { publicPath }),
+    timeoutPromise,
+  ]);
 
   const buffer = Buffer.from(await blob.arrayBuffer());
   await writeFile(outPath, buffer);

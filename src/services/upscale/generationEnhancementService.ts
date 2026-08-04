@@ -27,17 +27,37 @@ export interface EnhanceGeneratedImageResult {
   binaryPath?: string;
 }
 
-let realEsrganAvailable: boolean | null = null;
+interface AvailabilityCache {
+  value: boolean;
+  checkedAt: number;
+}
 
-async function isRealEsrganActuallyAvailable(): Promise<boolean> {
-  if (realEsrganAvailable !== null) return realEsrganAvailable;
+let availabilityCache: AvailabilityCache | null = null;
+
+function getRecheckMs(): number {
+  const env = process.env.REALESRGAN_RECHECK_MS;
+  if (env === undefined) return 300000;
+  const parsed = Number(env);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 300000;
+}
+
+function invalidateAvailability(): void {
+  availabilityCache = { value: false, checkedAt: Date.now() };
+}
+
+async function isRealEsrganActuallyAvailable(autoDownload: boolean): Promise<boolean> {
+  const now = Date.now();
+  if (availabilityCache !== null) {
+    if (availabilityCache.value) return true;
+    if (now - availabilityCache.checkedAt < getRecheckMs()) return false;
+  }
   log('Checking Real-ESRGAN availability...');
-  const status = await checkRealEsrganAvailability({ autoDownload: false });
-  realEsrganAvailable = status.available;
+  const status = await checkRealEsrganAvailability({ autoDownload });
+  availabilityCache = { value: status.available, checkedAt: now };
   if (!status.available) {
     warn(`Real-ESRGAN not available (will use sharp fallback): ${status.reason || 'unknown'}`);
   }
-  return realEsrganAvailable;
+  return status.available;
 }
 
 export async function enhanceGeneratedImage(
@@ -71,7 +91,7 @@ export async function enhanceGeneratedImage(
   }
 
   if (options.backend === 'auto') {
-    const available = await isRealEsrganActuallyAvailable();
+    const available = await isRealEsrganActuallyAvailable(options.autoDownload);
     if (!available) {
       warn('Real-ESRGAN unavailable (cached), skipping to sharp fallback...');
       const result = await upscaleWithSharpFallback({
@@ -109,7 +129,7 @@ export async function enhanceGeneratedImage(
       binaryPath: result.binaryPath,
     };
   } catch (error) {
-    realEsrganAvailable = false;
+    invalidateAvailability();
     if (options.backend === 'realesrgan' || options.fallback !== 'sharp') {
       throw error;
     }

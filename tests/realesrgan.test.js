@@ -73,7 +73,7 @@ describe('ensureRealEsrgan', () => {
     process.env.REALESRGAN_CACHE_DIR = dir;
     globalThis.fetch = async () => {
       fetchCount += 1;
-      return new Response('fail', { status: 500, statusText: 'test' });
+      return new Response('not found', { status: 404, statusText: 'Not Found' });
     };
 
     try {
