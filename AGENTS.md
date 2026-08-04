@@ -58,16 +58,17 @@ With defaults, every call produces `<fileName>.<format>` (raw) and an enhanced f
 
 ## Architecture quick map
 
-- `src/index.ts` → `src/server.ts` — entrypoint; MCP Server, 4 tools + 1 prompt registered via `setRequestHandler`
+- `src/index.ts` → `src/server.ts` — entrypoint; MCP Server, 4 tools + 1 prompt registered via `setRequestHandler`; server version read from package.json at runtime
 - `src/schemas/` — `imageSchemas` (generateImage/generateImageUrl), `textSchemas` (listImageModels/listTextModels)
-- `src/tools/` — 2 handler files. `generateImage.ts` (generateImage + generateImageUrl; contains post-processing pipeline + keyword detection), `textTools.ts` (listImageModels + listTextModels)
+- `src/tools/` — 2 handler files. `generateImage.ts` (generateImage + generateImageUrl; thin orchestration only), `textTools.ts` (listImageModels + listTextModels)
 - `src/services/`:
+  - `pipeline/` — `promptBuilder` (buildGenerationPrompt: optimize + asset + noText constraints, shared by both handlers), `postProcessor` (runPostProcessing: clarity → enhancement → background removal → compress, with partial-failure handling)
   - `pollinations/` — image/text API + client with retry
   - `enhance/` — `clarityService` (median/neural denoise + CLAHE + sharpen pipeline), `denoiseService` (ONNX neural denoise, falls back to median), `backgroundRemovalService` (@imgly ONNX), `compressService` (pngquant/zopfli)
-  - `upscale/` — `realesrganService` (probe/auto-download/cache platform package + spawn Real-ESRGAN ncnn-vulkan), `fallbackUpscaleService` (sharp CPU resize), `generationEnhancementService` (generateImage enhancement orchestration)
+  - `upscale/` — `realesrganService` (probe/auto-download/cache platform package + spawn Real-ESRGAN ncnn-vulkan), `fallbackUpscaleService` (sharp CPU resize), `generationEnhancementService` (generateImage enhancement orchestration), `modelSelectionService` (auto Real-ESRGAN model selection)
   - `optimizer/` — promptOptimizer LLM compression + stylePresets
-- `src/config/` — `constants.ts` (env→defaults), `defaults.ts` (getDefaults helper), `models.ts` (hardcoded model registry — do NOT replace with live fetch)
-- `src/utils/` — file I/O, `logger.ts` (note: `imageUtils.ts` was removed — sharp helpers now live in services)
+- `src/config/` — `constants.ts` (env→defaults), `assetKeywords.ts` (asset/weapon/organic keyword arrays + constraint builders + model selection), `models.ts` (hardcoded model registry — do NOT replace with live fetch)
+- `src/utils/` — file I/O, `logger.ts`, `pathUtils.ts`, `validate.ts` (clamp + sanitizeFileName) (note: `imageUtils.ts` was removed — sharp helpers now live in services)
 
 ## Gotchas that cost real time
 
@@ -78,7 +79,7 @@ With defaults, every call produces `<fileName>.<format>` (raw) and an enhanced f
 - **Neural denoise (`denoiseMethod: 'neural'`)** requires a DnCNN-style ONNX model at `DENOISE_MODEL_PATH` env. Without it, `clarityService` silently falls back to median (sets `denoiseFallback: true`). No model is bundled — users opt in by providing a model.
 - **`compressImage`** (pngquant+zopfli) is shared by `generateImage`. Skipped for non-PNG. Requires `imagemin-pngquant` / `imagemin-zopfli` native deps — if install fails, set `compress: false`.
 - **Real-ESRGAN (`generateImage` + `enhanceImage`)**: reads optional `REALESRGAN_PATH` to use an existing binary; otherwise auto-download can fetch the current platform package. `REALESRGAN_CACHE_DIR` overrides cache location. Requires Vulkan-capable GPU/driver; Windows integrated GPUs work only with proper Intel/AMD Vulkan drivers. `generateImage` defaults to sharp CPU fallback if Real-ESRGAN is unsupported or fails.
-- **Env defaults live in `src/config/constants.ts`**. Reads `IMAGE_AUTO_OPTIMIZE`, `IMAGE_OPTIMIZE_STYLE`, `IMAGE_ENHANCE`, `IMAGE_SAFE`, `TEXT_MODEL`, `TEXT_TEMPERATURE`, `TEXT_TOP_P`, `OUTPUT_DIR`, `IMAGE_MODEL`/`IMAGE_WIDTH`/`IMAGE_HEIGHT`, `DEBUG`. `DENOISE_MODEL_PATH` is read directly in `denoiseService.ts` (optional). There are NO `ENHANCE_DEFAULT_*` or `TEXT_SYSTEM` env vars.
+- **Env defaults live in `src/config/constants.ts`**. Reads `IMAGE_AUTO_OPTIMIZE`, `IMAGE_OPTIMIZE_STYLE`, `IMAGE_ENHANCE`, `IMAGE_SAFE`, `TEXT_MODEL`, `TEXT_TEMPERATURE`, `TEXT_TOP_P`, `OUTPUT_DIR`, `IMAGE_MODEL`/`IMAGE_WIDTH`/`IMAGE_HEIGHT`, `DEBUG`. `DENOISE_MODEL_PATH` is read directly in `denoiseService.ts` (optional). `REALESRGAN_RECHECK_MS` (default 300000) controls the Real-ESRGAN availability re-probe interval in `generationEnhancementService.ts`; `BG_REMOVAL_TIMEOUT_MS` (default 300000) bounds the ONNX background-removal call. There are NO `ENHANCE_DEFAULT_*` or `TEXT_SYSTEM` env vars.
 
 ## Pollinations free-tier hard limits (validated empirically)
 
