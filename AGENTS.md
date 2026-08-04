@@ -15,6 +15,14 @@ There is no lint, separate typecheck, or codegen step. `npm run build` is the co
 
 Before every git commit, bump the npm package version in `package.json` and `package-lock.json`. Use `npm version <new-version> --no-git-tag-version` so the version change is included in the same commit.
 
+## Project status (2026-08-04)
+
+Comprehensive optimization completed (P0-P4, spec: `docs/superpowers/specs/2026-08-04-comprehensive-optimization-design.md`), v0.1.3 → v0.2.3, 110 tests passing. Highlights:
+- **P0/P1**: server version synced from package.json; image magic-bytes validation (no corrupt files); Real-ESRGAN availability cache has TTL (`REALESRGAN_RECHECK_MS`, default 300000) so late Vulkan drivers recover; post-processing partial failures return raw path + completed steps + error; Real-ESRGAN download retries (2x, 5xx/429/network only) with 120s timeout; ONNX bg-removal timeout (`BG_REMOVAL_TIMEOUT_MS`, default 300000); compression failures surface as `warning`; fileName sanitized + width/height/denoiseRadius/timeout clamped.
+- **P2**: `generateImage.ts` god function split into `src/services/pipeline/promptBuilder.ts` + `postProcessor.ts`; 150+ keywords extracted to `src/config/assetKeywords.ts`; deleted `src/types/tools.ts` + `src/config/defaults.ts`; `src/utils/validate.ts` added.
+- **P3**: bg-removal strategy analysis samples 100x100 thumbnail (was full decode); BFS uses Int32Array queue + squared-distance (no Math.hypot); denoise HWC↔CHW conversion LUT + bitwise clamp.
+- **P4**: added promptOptimizer/stylePresets/client/denoiseService tests; `.env.example` created; README + reference docs synced to 4-tool surface.
+
 ## Real-ESRGAN and generated-image enhancement
 
 `generateImage` defaults to generated-image enhancement with `enhanceBackend='auto'`: try Real-ESRGAN ncnn-vulkan first, auto-download the current-platform portable package on supported environments when missing, and fall back to sharp CPU resize if Real-ESRGAN/Vulkan is unsupported or fails. `realEsrganModel` defaults to `auto`, which selects `realesr-animevideov3` for generated-image enhancement. Explicit model overrides always win. When Real-ESRGAN is unavailable, availability is re-probed after `REALESRGAN_RECHECK_MS` (default 300000) so a late-loading Vulkan driver can recover.
