@@ -19,8 +19,6 @@
 - **Path-first MCP responses**: generated images return local paths by default to avoid large base64 payloads.
 - **Real-ESRGAN auto model selection**: generated images choose a suitable enhancement model by prompt intent.
 - **Prompt optimization**: long prompts can be compressed by a free LLM before image generation.
-- **Standalone upscaling**: enhance existing local images with Real-ESRGAN 2x/3x/4x.
-- **Free text generation**: `respondText` uses Pollinations text models, including `openai-fast`.
 
 ## Requirements
 
@@ -28,7 +26,7 @@
 - npm
 - Optional: Vulkan-capable GPU/driver for Real-ESRGAN ncnn-vulkan
 
-`generateImage` defaults to `enhanceBackend: "auto"`: it tries Real-ESRGAN first and falls back to sharp CPU enhancement when Real-ESRGAN or Vulkan is unavailable. The standalone `enhanceImage` tool requires Real-ESRGAN to run successfully.
+`generateImage` defaults to `enhanceBackend: "auto"`: it tries Real-ESRGAN first and falls back to sharp CPU enhancement when Real-ESRGAN or Vulkan is unavailable.
 
 ## Installation
 
@@ -88,11 +86,8 @@ More examples: [MCP client configuration](docs/guides/mcp-config.md).
 |---|---|
 | `generateImage` | Generate an image, save raw + final files, and return paths by default. Uses Real-ESRGAN auto enhancement with sharp fallback. |
 | `generateImageUrl` | Return a shareable Pollinations image URL only, without downloading or post-processing. |
-| `enhanceImage` | Upscale/enhance an existing local image with Real-ESRGAN ncnn-vulkan. |
-| `optimizePrompt` | Compress and improve long image prompts with a free LLM. |
 | `listImageModels` | List the curated image model registry and recommended use cases. |
 | `listTextModels` | List available text models and capabilities. |
-| `respondText` | Generate text with a free Pollinations text model. |
 
 ## Quick Examples
 
@@ -107,15 +102,7 @@ Generate a realistic product photo of a ceramic coffee mug on a wooden desk
 ```
 
 ```text
-Upscale /Users/your-name/Pictures/avatar.png by 2x with Real-ESRGAN
-```
-
-```text
-Optimize this prompt for Pollinations: a very long image prompt...
-```
-
-```text
-Use image-forge-mcp to explain how neural image upscaling works
+Generate a transparent game asset icon: a colorful dragon-slaying sword, fully visible, sharp edges
 ```
 
 ## `generateImage` Defaults
@@ -169,9 +156,9 @@ Important defaults:
 | `REALESRGAN_PATH` | Use an existing Real-ESRGAN binary instead of auto-download. |
 | `REALESRGAN_CACHE_DIR` | Override the auto-download cache directory. |
 | `REALESRGAN_DOWNLOAD_BASE_URL` | Override or mirror the Real-ESRGAN download base URL. |
+| `REALESRGAN_RECHECK_MS` | Real-ESRGAN availability re-probe interval when unavailable (default 300000). |
 | `DENOISE_MODEL_PATH` | Optional DnCNN-style ONNX model for neural denoise. |
-| `POLLINATIONS_TOKEN` | Optional Pollinations token for enhanced access. Free use does not require it. |
-| `POLLINATIONS_REFERRER` | Optional Pollinations referrer URL. |
+| `BG_REMOVAL_TIMEOUT_MS` | Timeout for the ONNX background-removal call (default 300000). |
 | `DEBUG` | Enable debug logging to stderr. |
 
 ## Known Limitations
@@ -179,7 +166,7 @@ Important defaults:
 - Pollinations free-tier image output is capped around 768px before local enhancement.
 - Same prompt + same seed may return the same image even if the model parameter changes; change the seed when comparing models.
 - Background removal downloads an ONNX model on first use and can take 10-30 seconds the first time.
-- Real-ESRGAN requires a Vulkan-capable runtime. `generateImage` falls back to sharp when Real-ESRGAN cannot run; `enhanceImage` surfaces the Real-ESRGAN failure.
+- Real-ESRGAN requires a Vulkan-capable runtime. `generateImage` falls back to sharp when Real-ESRGAN cannot run.
 - Logs must go to stderr because stdout is reserved for MCP JSON-RPC.
 
 ## Documentation

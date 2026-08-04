@@ -19,8 +19,6 @@
 - **默认返回路径**：生成图片默认返回本地路径，避免 MCP 响应里塞入大段 base64。
 - **Real-ESRGAN 自动选型**：按 prompt 意图为生成图选择合适的增强模型。
 - **prompt 优化**：长 prompt 可先由免费 LLM 压缩，提高免费版生成稳定性。
-- **已有图片超分**：`enhanceImage` 可对本地图片做 Real-ESRGAN 2x/3x/4x 高清化。
-- **免费文本生成**：`respondText` 使用 Pollinations 文本模型，包括 `openai-fast`。
 
 ## 环境要求
 
@@ -28,7 +26,7 @@
 - npm
 - 可选：支持 Vulkan 的 GPU/驱动，用于 Real-ESRGAN ncnn-vulkan
 
-`generateImage` 默认使用 `enhanceBackend: "auto"`：优先尝试 Real-ESRGAN，Real-ESRGAN 或 Vulkan 不可用时回退到 sharp CPU 增强。独立工具 `enhanceImage` 需要 Real-ESRGAN 成功运行。
+`generateImage` 默认使用 `enhanceBackend: "auto"`：优先尝试 Real-ESRGAN，Real-ESRGAN 或 Vulkan 不可用时回退到 sharp CPU 增强。
 
 ## 安装
 
@@ -88,11 +86,8 @@ npm run build
 |---|---|
 | `generateImage` | 文生图，保存原图和最终图，默认返回路径。默认执行 Real-ESRGAN auto 增强，失败时 sharp fallback。 |
 | `generateImageUrl` | 只返回可分享的 Pollinations 图片 URL，不下载、不后处理。 |
-| `enhanceImage` | 对已有本地图片使用 Real-ESRGAN ncnn-vulkan 超分增强。 |
-| `optimizePrompt` | 用免费 LLM 压缩和优化长图像 prompt。 |
 | `listImageModels` | 列出内置图像模型注册表和推荐用途。 |
 | `listTextModels` | 列出可用文本模型和能力。 |
-| `respondText` | 使用免费 Pollinations 文本模型生成文本。 |
 
 ## 快速示例
 
@@ -107,15 +102,7 @@ npm run build
 ```
 
 ```text
-把 /Users/your-name/Pictures/avatar.png 用 Real-ESRGAN 放大 2 倍
-```
-
-```text
-帮我优化这个 Pollinations prompt：一大段很长的描述...
-```
-
-```text
-用 image-forge-mcp 的文本功能解释一下神经网络超分辨率
+生成透明背景游戏素材图标：彩色屠龙刀，主体完整，边缘分明
 ```
 
 ## `generateImage` 默认行为
@@ -169,9 +156,9 @@ generate -> save raw -> optional clarity -> enhancement -> optional background r
 | `REALESRGAN_PATH` | 使用已有 Real-ESRGAN 二进制，跳过自动下载。 |
 | `REALESRGAN_CACHE_DIR` | 覆盖 Real-ESRGAN 自动下载缓存目录。 |
 | `REALESRGAN_DOWNLOAD_BASE_URL` | 覆盖或镜像 Real-ESRGAN 下载地址。 |
+| `REALESRGAN_RECHECK_MS` | Real-ESRGAN 不可用时重新探测间隔（默认 300000）。 |
 | `DENOISE_MODEL_PATH` | 可选 DnCNN 类 ONNX 神经降噪模型路径。 |
-| `POLLINATIONS_TOKEN` | 可选 Pollinations token。免费使用不需要。 |
-| `POLLINATIONS_REFERRER` | 可选 Pollinations referrer URL。 |
+| `BG_REMOVAL_TIMEOUT_MS` | ONNX 抠图超时（默认 300000）。 |
 | `DEBUG` | 开启 stderr 调试日志。 |
 
 ## 已知限制
@@ -179,7 +166,7 @@ generate -> save raw -> optional clarity -> enhancement -> optional background r
 - Pollinations 免费版原始图像输出会限制在约 768px，本地增强在此之后执行。
 - 相同 prompt + 相同 seed 可能命中缓存，即使换 model 参数也返回同一张图；比较模型时请换 seed。
 - 首次抠图会下载 ONNX 模型，可能需要 10-30 秒。
-- Real-ESRGAN 需要可用的 Vulkan 运行环境。`generateImage` 会在 Real-ESRGAN 不可用时回退到 sharp；`enhanceImage` 会返回 Real-ESRGAN 错误。
+- Real-ESRGAN 需要可用的 Vulkan 运行环境。`generateImage` 会在 Real-ESRGAN 不可用时回退到 sharp。
 - 日志必须输出到 stderr，因为 stdout 保留给 MCP JSON-RPC。
 
 ## 文档

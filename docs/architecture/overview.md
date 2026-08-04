@@ -22,8 +22,7 @@ image-forge-mcp (TypeScript MCP Server, stdio transport)
 │   └── 压缩    → imagemin (pngquant + zopfli)
 │
 ├── 图像增强/高清化
-│   ├── generateImage → Real-ESRGAN auto，失败时 sharp CPU fallback
-│   └── enhanceImage → 已有本地图片 Real-ESRGAN ncnn-vulkan (自动下载或 REALESRGAN_PATH)
+│   └── generateImage → Real-ESRGAN auto，失败时 sharp CPU fallback
 │
 ├── Prompt 优化引擎
 │   └── 精简器  → 调用 Pollinations 免费 LLM 压缩 prompt
@@ -39,7 +38,7 @@ image-forge-mcp (TypeScript MCP Server, stdio transport)
 |---|---|---|---|
 | **入口层** | `src/index.ts` `src/server.ts` | MCP Server 实例、工具注册、stdio transport | MCP SDK |
 | **Schema 层** | `src/schemas/` | 工具参数定义 + description | 无 |
-| **工具层** | `src/tools/` | 7 个工具的请求处理、参数校验、结果组装 | services |
+| **工具层** | `src/tools/` | 4 个工具的请求处理、参数校验、结果组装 | services |
 | **服务层** | `src/services/` | 业务逻辑（API 调用、抠图、清晰度增强、压缩、prompt 精简） | config, utils |
 | **配置层** | `src/config/` | 默认值、模型注册表、常量 | 无 |
 | **工具函数** | `src/utils/` | 文件操作、日志 | 无 |
@@ -52,7 +51,7 @@ image-forge-mcp (TypeScript MCP Server, stdio transport)
 agent 调用 generateImage(prompt, autoOptimize=true, denoise=false, ...)
   │
   ├─ autoOptimize=true 且 prompt > 40 词?
-  │   └─ YES → 调 optimizePrompt(prompt, style) 精简
+  │   └─ YES → promptBuilder.buildGenerationPrompt 调 LLM 精简
   │   └─ NO → 直接用原 prompt
   │
   ├─ 追加默认 no-text 约束
@@ -82,48 +81,41 @@ agent 调用 generateImage(prompt, autoOptimize=true, denoise=false, ...)
      （显式传值优先于自动检测）
 ```
 
-### 3.2 optimizePrompt（prompt 精简）
+### 3.2 promptBuilder（prompt 精简，内部流水线）
 
 ```
-agent 调用 optimizePrompt(prompt, style="auto", targetWords=30)
+generateImage/generateImageUrl → buildGenerationPrompt(prompt, args, authConfig)
   │
-  ├─ style="auto"? → 检测 prompt 关键词选择 style
+  ├─ autoOptimize=true 且 prompt > 40 词?
+  │   └─ YES → 调 LLM 精简 (stylePresets 选择风格策略)
   │
-  ├─ 构建 system prompt (含 style 策略 + targetWords)
+  ├─ 追加资产约束 (assetKeywords.addAssetConstraint)
+  │   └─ 素材/武器/刃器/有机体关键词 → 追加完整主体、边缘清晰、单武器等约束
   │
-  ├─ 调 text.pollinations.ai/openai-fast
-  │   └─ POST /openai { model, messages:[{system},{user:prompt}] }
-  │
-  ├─ 解析返回,提取精简后 prompt
-  │
-  └─ 返回 { optimizedPrompt, originalPrompt, compressionRatio, style }
+  └─ 追加 no-text 约束 (除非 noTextConstraint=false)
 ```
 
-### 3.3 enhanceImage（已有图片高清化）
+### 3.3 后处理流水线（postProcessor，generateImage 内部）
 
 ```
-agent 调用 enhanceImage(inputPath, scale=2, model="realesr-animevideov3", autoDownload=true)
+generateImage → runPostProcessing(rawPath, prompt, mimeType, args)
   │
-  ├─ REALESRGAN_PATH 已设置?
-  │   └─ YES → 直接使用指定二进制
-  │   └─ NO  → 查找 .cache/realesrgan/v0.2.5.0/<platform>/
-  │           └─ 不存在且 autoDownload=true → 下载当前平台 portable 包并解压
+  ├─ clarity active? → clarityService.applyClarity (denoise/sharpen/CLAHE)
   │
-  ├─ 输入图有 alpha?
-  │   └─ YES → 拆分 RGB + alpha，Real-ESRGAN 只处理 RGB，最后放大 alpha 并合回
-  │   └─ NO  → 直接处理原图
+  ├─ enhancement (默认 realEsrgan=true, enhanceBackend=auto)
+  │   └─ Real-ESRGAN auto → 失败时 sharp CPU fallback
   │
-  ├─ spawn realesrgan-ncnn-vulkan -i input -o output -n model -s scale
+  ├─ removeBackground? → backgroundRemovalService (增强后 PNG → 透明 PNG)
   │
-  ├─ 可选 removeBackground=true → ONNX 抠图
+  ├─ compress? → pngquant+zopfli (仅 PNG，默认 true)
   │
-  └─ 返回增强 PNG base64 + input/output/model/scale/binary 信息
+  └─ 部分失败 → 返回 { isError: true, rawPath + 已完成步骤 + 失败原因 }
 ```
 
 ## 4. 关键设计约束
 
 - **stdio transport**：所有日志输出到 stderr（不能污染 stdout 的 MCP 通信）
 - **无外部状态**：所有配置通过 env 注入，不写持久化状态文件
-- **Real-ESRGAN 可选且有 fallback**：默认 `generateImage` 会尝试 Real-ESRGAN auto 增强；支持平台缺少二进制时可自动下载，环境不支持或运行失败时默认 sharp CPU fallback，不阻塞文生图流程。`enhanceImage` 仍是已有本地图片的独立 Real-ESRGAN 工具。
-- **错误友好**：所有工具捕获错误返回 `{ isError: true, content: [错误说明] }`，不抛异常崩溃
-- **默认避免图片文字**：`generateImage` 与 `generateImageUrl` 在实际生成 prompt 后追加 no-text/no-logo/no-watermark 约束；如果用户明确要生成文字，目前没有单独关闭开关，需要调整代码
+- **Real-ESRGAN 可选且有 fallback**：默认 `generateImage` 会尝试 Real-ESRGAN auto 增强；支持平台缺少二进制时可自动下载，环境不支持或运行失败时默认 sharp CPU fallback，不阻塞文生图流程。Real-ESRGAN 不可用时按 `REALESRGAN_RECHECK_MS` 间隔重新探测，Vulkan 驱动后加载可恢复。
+- **错误友好**：所有工具捕获错误返回 `{ isError: true, content: [错误说明] }`，不抛异常崩溃；后处理部分失败时保留 raw 图并报告已完成步骤
+- **默认避免图片文字**：`generateImage` 与 `generateImageUrl` 默认追加 no-text/no-logo/no-watermark 约束；传 `noTextConstraint: false` 可关闭（用于海报文字、UI 截图、标签等）

@@ -17,7 +17,7 @@ updated: 2026-07-07
 | 参数 | 类型 | 必填 | 默认 | 说明 |
 |---|---|---|---|---|
 | `prompt` | string | ✅ | — | 图像描述，可长可短，默认会自动精简 |
-| `model` | string | — | `flux` | 图像模型，见 models.md |
+| `model` | string | — | `qwen-image` | 图像模型，见 models.md |
 | `seed` | number | — | random | 不同 seed = 不同图 |
 | `width` / `height` | number | — | `1024` | 请求尺寸（免费版降采样到 768） |
 | `autoOptimize` | boolean | — | `true` | 自动精简 prompt（>40 词触发） |
@@ -63,32 +63,6 @@ updated: 2026-07-07
 
 仅生成可分享 URL，不下载不存盘，无后处理。参数同 generateImage 生成参数，但无 outputPath/fileName/format/compress 及后处理参数。和 generateImage 一样会追加默认 no-text 约束。
 
-## enhanceImage
-
-对已有本地图片使用 Real-ESRGAN ncnn-vulkan 做 2x/3x/4x 高清化。首次使用可自动下载当前平台 portable 包（约 45-50MB zip，解压约 100MB）。该工具仍返回增强 PNG 图片内容加文本元数据。
-
-| 参数 | 类型 | 必填 | 默认 | 说明 |
-|---|---|---|---|---|
-| `inputPath` | string | ✅ | — | 输入图片路径 |
-| `outputPath` | string | — | 同目录 `_realesrgan_x{scale}.png` | 输出 PNG 路径 |
-| `model` | enum | — | `realesr-animevideov3` | `realesrgan-x4plus`/`realesrgan-x4plus-anime`/`realesr-animevideov3` |
-| `scale` | enum | — | `2` | `2`/`3`/`4`，Windows 集显建议先用 2 |
-| `autoDownload` | boolean | — | `true` | 未设置 `REALESRGAN_PATH` 时自动下载当前平台二进制 |
-| `timeoutMs` | number | — | `120000` | 进程超时 |
-| `removeBackground` | boolean | — | `false` | Real-ESRGAN 后再跑 ONNX 抠图，适合透明素材边缘质量不佳时使用 |
-
-二进制查找顺序：`REALESRGAN_PATH` → `.cache/realesrgan/v0.2.5.0/<platform>/` → `autoDownload=true` 时下载当前平台包。下载需要网络；运行需要 Vulkan-capable GPU/driver。
-
-## optimizePrompt
-
-用免费 LLM 精简 prompt（独立工具）。
-
-| 参数 | 类型 | 必填 | 默认 | 说明 |
-|---|---|---|---|---|
-| `prompt` | string | ✅ | — | 原始 prompt |
-| `style` | enum | — | `auto` | `auto`/`realistic`/`anime`/`painting`/`scifi`/`portrait` |
-| `targetWords` | number | — | `30` | 目标词数（20-40 推荐） |
-
 ## listImageModels
 
 无参数。返回内置模型常量表。
@@ -96,15 +70,3 @@ updated: 2026-07-07
 ## listTextModels
 
 无参数。返回免费文本模型列表。
-
-## respondText
-
-LLM 文本生成。
-
-| 参数 | 类型 | 必填 | 默认 | 说明 |
-|---|---|---|---|---|
-| `prompt` | string | ✅ | — | 用户输入 |
-| `system` | string | — | `""` | 系统提示 |
-| `temperature` | number | — | `0.7` | 0=聚焦 2=创意 |
-| `top_p` | number | — | `0.9` | 核采样 |
-| `seed` | number | — | random | 复现 |
