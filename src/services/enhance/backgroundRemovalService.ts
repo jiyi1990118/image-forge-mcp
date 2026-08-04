@@ -49,11 +49,13 @@ export async function analyzeBackgroundStrategy(
   inputPath: string,
   requestedStrategy: RemoveBackgroundStrategy = 'auto',
 ): Promise<BackgroundStrategyAnalysis> {
-  const image = sharp(inputPath).ensureAlpha();
-  const metadata = await image.metadata();
-  const width = metadata.width || 1;
-  const height = metadata.height || 1;
-  const { data } = await image.raw().toBuffer({ resolveWithObject: true });
+  const { data, info } = await sharp(inputPath)
+    .ensureAlpha()
+    .resize({ width: 100, height: 100, fit: 'fill' })
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const width = info.width;
+  const height = info.height;
 
   const samples: Array<{ r: number; g: number; b: number }> = [];
   const sampleStep = Math.max(1, Math.floor(Math.min(width, height) / 20));
@@ -111,20 +113,31 @@ export async function removeConnectedColorBackground(
 
   const hardThreshold = 42;
   const softThreshold = 92;
-  const visited = new Uint8Array(width * height);
-  const queue: number[] = [];
+  const hardThresholdSq = hardThreshold * hardThreshold;
+  const softThresholdSq = softThreshold * softThreshold;
+  const bgR = background.r;
+  const bgG = background.g;
+  const bgB = background.b;
 
-  function colorDistance(pixelIndex: number): number {
+  const visited = new Uint8Array(width * height);
+  const queue = new Int32Array(width * height);
+  let head = 0;
+  let tail = 0;
+
+  function colorDistanceSq(pixelIndex: number): number {
     const i = pixelIndex * 4;
-    return Math.hypot(data[i] - background.r, data[i + 1] - background.g, data[i + 2] - background.b);
+    const dr = data[i] - bgR;
+    const dg = data[i + 1] - bgG;
+    const db = data[i + 2] - bgB;
+    return dr * dr + dg * dg + db * db;
   }
 
   function enqueue(pixelIndex: number): void {
-    if (visited[pixelIndex] || colorDistance(pixelIndex) > softThreshold) {
+    if (visited[pixelIndex] || colorDistanceSq(pixelIndex) > softThresholdSq) {
       return;
     }
     visited[pixelIndex] = 1;
-    queue.push(pixelIndex);
+    queue[tail++] = pixelIndex;
   }
 
   for (let x = 0; x < width; x++) {
@@ -136,16 +149,17 @@ export async function removeConnectedColorBackground(
     enqueue(y * width + width - 1);
   }
 
-  for (let cursor = 0; cursor < queue.length; cursor++) {
-    const pixelIndex = queue[cursor];
+  while (head < tail) {
+    const pixelIndex = queue[head++];
     const x = pixelIndex % width;
     const y = Math.floor(pixelIndex / width);
     const i = pixelIndex * 4;
-    const distance = colorDistance(pixelIndex);
+    const distSq = colorDistanceSq(pixelIndex);
 
-    if (distance <= hardThreshold) {
+    if (distSq <= hardThresholdSq) {
       data[i + 3] = 0;
     } else {
+      const distance = Math.sqrt(distSq);
       data[i + 3] = Math.round(data[i + 3] * ((distance - hardThreshold) / (softThreshold - hardThreshold)));
     }
 

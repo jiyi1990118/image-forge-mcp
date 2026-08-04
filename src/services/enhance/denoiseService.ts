@@ -1,5 +1,4 @@
-import { access, mkdir, writeFile, readFile } from 'fs/promises';
-import { join } from 'path';
+import { access, writeFile } from 'fs/promises';
 import { log } from '../../utils/logger.js';
 
 /**
@@ -23,6 +22,37 @@ export class NeuralDenoiseUnavailable extends Error {
 export interface NeuralDenoiseResult {
   outputPath: string;
   modelUsed: string;
+}
+
+// HWC uint8 -> CHW float32 [0,1] (LUT avoids per-pixel division)
+export function hwcToChw(rgb: Buffer, width: number, height: number): Float32Array {
+  const plane = width * height;
+  const div255 = new Float32Array(256);
+  for (let i = 0; i < 256; i++) div255[i] = i / 255;
+
+  const input = new Float32Array(3 * plane);
+  for (let i = 0; i < plane; i++) {
+    const src = i * 3;
+    input[i] = div255[rgb[src]];
+    input[plane + i] = div255[rgb[src + 1]];
+    input[2 * plane + i] = div255[rgb[src + 2]];
+  }
+  return input;
+}
+
+// CHW float32 -> HWC uint8 (bitwise trunc + manual clamp avoids Math.round/max/min chain)
+export function chwToHwc(output: Float32Array, width: number, height: number): Buffer {
+  const plane = width * height;
+  const outBuf = Buffer.alloc(plane * 3);
+  for (let i = 0; i < plane; i++) {
+    const v0 = (output[i] * 255 + 0.5) | 0;
+    const v1 = (output[plane + i] * 255 + 0.5) | 0;
+    const v2 = (output[2 * plane + i] * 255 + 0.5) | 0;
+    outBuf[i * 3] = v0 < 0 ? 0 : v0 > 255 ? 255 : v0;
+    outBuf[i * 3 + 1] = v1 < 0 ? 0 : v1 > 255 ? 255 : v1;
+    outBuf[i * 3 + 2] = v2 < 0 ? 0 : v2 > 255 ? 255 : v2;
+  }
+  return outBuf;
 }
 
 function getModelPath(): string | null {
@@ -78,20 +108,13 @@ export async function denoiseImageNeural(
   const { data: rgb, info } = raw;
   const W = info.width;
   const H = info.height;
-  const plane = H * W;
   if (info.channels !== 3) {
     throw new NeuralDenoiseUnavailable(
       `Expected 3-channel RGB after removeAlpha, got ${info.channels}`
     );
   }
 
-  // HWC uint8 -> CHW float32 [0,1]
-  const input = new Float32Array(3 * plane);
-  for (let i = 0; i < plane; i++) {
-    input[i] = rgb[i * 3] / 255;
-    input[plane + i] = rgb[i * 3 + 1] / 255;
-    input[2 * plane + i] = rgb[i * 3 + 2] / 255;
-  }
+  const input = hwcToChw(rgb, W, H);
 
   const inputName = session.inputNames[0];
   const outputName = session.outputNames[0];
@@ -112,13 +135,7 @@ export async function denoiseImageNeural(
     );
   }
 
-  // CHW float32 -> HWC uint8
-  const outBuf = Buffer.alloc(plane * 3);
-  for (let i = 0; i < plane; i++) {
-    outBuf[i * 3] = Math.max(0, Math.min(255, Math.round(output[i] * 255)));
-    outBuf[i * 3 + 1] = Math.max(0, Math.min(255, Math.round(output[plane + i] * 255)));
-    outBuf[i * 3 + 2] = Math.max(0, Math.min(255, Math.round(output[2 * plane + i] * 255)));
-  }
+  const outBuf = chwToHwc(output, W, H);
 
   await sharp(outBuf, { raw: { width: W, height: H, channels: 3 } })
     .png({ quality: 95 })
