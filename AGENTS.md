@@ -22,6 +22,7 @@ Comprehensive optimization completed (P0-P4, spec: `docs/superpowers/specs/2026-
 - **P2**: `generateImage.ts` god function split into `src/services/pipeline/promptBuilder.ts` + `postProcessor.ts`; 150+ keywords extracted to `src/config/assetKeywords.ts`; deleted `src/types/tools.ts` + `src/config/defaults.ts`; `src/utils/validate.ts` added.
 - **P3**: bg-removal strategy analysis samples 100x100 thumbnail (was full decode); BFS uses Int32Array queue + squared-distance (no Math.hypot); denoise HWC↔CHW conversion LUT + bitwise clamp.
 - **P4**: added promptOptimizer/stylePresets/client/denoiseService tests; `.env.example` created; README + reference docs synced to 4-tool surface.
+- **Post-optimization review** (v0.2.5): ran `tsc --noUnusedLocals/Parameters` — removed 4 dead imports (`fileURLToPath`, `writeFile`, `path`, `log`) + dead `authConfig` param from `buildImageUrl`; added `clampNumber` (NaN-safe clamping) to `validate.ts`; `noUnusedLocals: true` enabled in tsconfig; bg-removal timeout timer now cleared; `validate.test.js` added (115 tests total).
 
 ## Real-ESRGAN and generated-image enhancement
 

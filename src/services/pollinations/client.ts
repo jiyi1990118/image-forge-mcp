@@ -140,8 +140,7 @@ export function buildImageUrl(
   width: number,
   height: number,
   enhance: boolean,
-  safe: boolean,
-  authConfig: AuthConfig | null
+  safe: boolean
 ): string {
   const params = new URLSearchParams();
   params.append('model', model);

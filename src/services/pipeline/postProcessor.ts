@@ -6,7 +6,7 @@ import { enhanceGeneratedImage, type EnhancementBackend, type EnhancementFallbac
 import { selectRealEsrganModel } from '../upscale/modelSelectionService.js';
 import { shouldUseAssetPipeline } from '../../config/assetKeywords.js';
 import { noBackgroundOutputPath } from '../../utils/pathUtils.js';
-import { clamp } from '../../utils/validate.js';
+import { clampNumber } from '../../utils/validate.js';
 import { log, error } from '../../utils/logger.js';
 
 export interface PostProcessingResult {
@@ -45,7 +45,7 @@ export async function runPostProcessing(
 ): Promise<PostProcessingResult> {
   const denoise = args.denoise !== undefined ? args.denoise !== false : DEFAULT_CLARITY.denoise;
   const denoiseMethod: 'median' | 'neural' = args.denoiseMethod === 'neural' ? 'neural' : 'median';
-  const denoiseRadius = args.denoiseRadius ? clamp(Math.floor(Number(args.denoiseRadius)), 1, 3) : DEFAULT_CLARITY.denoiseRadius;
+  const denoiseRadius = args.denoiseRadius ? clampNumber(args.denoiseRadius, DEFAULT_CLARITY.denoiseRadius, 1, 3) : DEFAULT_CLARITY.denoiseRadius;
   const sharpen = args.sharpen === true;
   const enhanceContrast = args.enhanceContrast === true;
   const realEsrgan = args.realEsrgan !== undefined ? args.realEsrgan !== false : true;
@@ -55,7 +55,7 @@ export async function runPostProcessing(
   const realEsrganModel = selectRealEsrganModel(prompt, requestedRealEsrganModel);
   const realEsrganScale = parseScale(args.realEsrganScale);
   const realEsrganAutoDownload = args.realEsrganAutoDownload !== undefined ? args.realEsrganAutoDownload !== false : true;
-  const realEsrganTimeoutMs = args.realEsrganTimeoutMs ? clamp(Math.floor(Number(args.realEsrganTimeoutMs)), 10000, 600000) : 120000;
+  const realEsrganTimeoutMs = args.realEsrganTimeoutMs ? clampNumber(args.realEsrganTimeoutMs, 120000, 10000, 600000) : 120000;
 
   let removeBackground: boolean;
   if (args.removeBackground !== undefined) {

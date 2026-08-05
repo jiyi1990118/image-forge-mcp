@@ -1,8 +1,6 @@
 import fs from 'fs';
-import path from 'path';
 import { buildImageUrl, fetchWithAuth, type AuthConfig } from './client.js';
 import { generateFileName, uniqueFilePath, randomSeed } from '../../utils/fileUtils.js';
-import { log } from '../../utils/logger.js';
 import { DEFAULTS } from '../../config/constants.js';
 
 const IMAGE_SIGNATURES: Array<{ name: string; offset: number; bytes: number[] }> = [
@@ -80,7 +78,7 @@ export async function generateImage(opts: GenerateImageOptions): Promise<Generat
     authConfig = null,
   } = opts;
 
-  const url = buildImageUrl(prompt, model, seed, width, height, enhance, safe, authConfig);
+  const url = buildImageUrl(prompt, model, seed, width, height, enhance, safe);
   const response = await fetchWithAuth(url, authConfig);
   const imageBuffer = await response.arrayBuffer();
   const buffer = Buffer.from(imageBuffer);
@@ -121,10 +119,9 @@ export async function generateImageUrlOnly(opts: GenerateImageOptions): Promise<
     height = 1024,
     enhance = false,
     safe = false,
-    authConfig = null,
   } = opts;
 
-  const url = buildImageUrl(prompt, model, seed, width, height, enhance, safe, authConfig);
+  const url = buildImageUrl(prompt, model, seed, width, height, enhance, safe);
   return {
     imageUrl: url,
     metadata: { prompt, model, seed, width, height, enhance, safe },

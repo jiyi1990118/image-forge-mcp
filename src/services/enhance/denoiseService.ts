@@ -1,4 +1,4 @@
-import { access, writeFile } from 'fs/promises';
+import { access } from 'fs/promises';
 import { log } from '../../utils/logger.js';
 
 /**

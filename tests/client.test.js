@@ -4,7 +4,7 @@ import { fetchWithAuth, buildImageUrl } from '../dist/services/pollinations/clie
 
 describe('buildImageUrl', () => {
   test('builds a pollinations image URL with all params', () => {
-    const url = buildImageUrl('a red apple', 'flux', 42, 1024, 1024, false, false, null);
+    const url = buildImageUrl('a red apple', 'flux', 42, 1024, 1024, false, false);
     assert.ok(url.startsWith('https://image.pollinations.ai/prompt/a%20red%20apple'));
     assert.ok(url.includes('model=flux'));
     assert.ok(url.includes('seed=42'));
@@ -16,8 +16,8 @@ describe('buildImageUrl', () => {
   });
 
   test('includes enhance param only when enabled', () => {
-    const withEnhance = buildImageUrl('cat', 'flux', 1, 512, 512, true, false, null);
-    const withoutEnhance = buildImageUrl('cat', 'flux', 1, 512, 512, false, false, null);
+    const withEnhance = buildImageUrl('cat', 'flux', 1, 512, 512, true, false);
+    const withoutEnhance = buildImageUrl('cat', 'flux', 1, 512, 512, false, false);
     assert.ok(withEnhance.includes('enhance=true'));
     assert.ok(!withoutEnhance.includes('enhance='));
   });

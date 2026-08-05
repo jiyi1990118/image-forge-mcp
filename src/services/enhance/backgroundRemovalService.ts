@@ -1,7 +1,6 @@
 import { writeFile } from 'fs/promises';
 import { join, basename, dirname, extname } from 'path';
 import { createRequire } from 'module';
-import { fileURLToPath } from 'url';
 import sharp from 'sharp';
 import { log } from '../../utils/logger.js';
 
@@ -236,16 +235,25 @@ export async function removeBackgroundImage(opts: RemoveBgOptions): Promise<Remo
   const { removeBackground } = await import('@imgly/background-removal-node');
   const publicPath = resolveImglyPublicPath();
   const timeoutMs = getBgRemovalTimeoutMs();
+  let timeoutId: NodeJS.Timeout;
   const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(
+    timeoutId = setTimeout(
       () => reject(new Error(`Background removal timed out after ${Math.round(timeoutMs / 1000)}s`)),
       timeoutMs
     );
   });
-  const blob = await Promise.race([
-    removeBackground(inputPath, { publicPath }),
-    timeoutPromise,
-  ]);
+
+  let blob: Blob;
+  try {
+    blob = await Promise.race([
+      removeBackground(inputPath, { publicPath }),
+      timeoutPromise,
+    ]);
+  } catch (err) {
+    clearTimeout(timeoutId!);
+    throw err;
+  }
+  clearTimeout(timeoutId!);
 
   const buffer = Buffer.from(await blob.arrayBuffer());
   await writeFile(outPath, buffer);

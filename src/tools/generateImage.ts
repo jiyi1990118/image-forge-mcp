@@ -5,7 +5,7 @@ import { runPostProcessing, type PostProcessingResult } from '../services/pipeli
 import { selectImageModel } from '../config/assetKeywords.js';
 import { DEFAULTS } from '../config/constants.js';
 import { randomSeed } from '../utils/fileUtils.js';
-import { clamp, sanitizeFileName } from '../utils/validate.js';
+import { clampNumber, sanitizeFileName } from '../utils/validate.js';
 import type { AuthConfig } from '../services/pollinations/client.js';
 
 type ImageContent = { type: string; data?: string; mimeType?: string; text: string };
@@ -19,8 +19,8 @@ function generationParams(args: Record<string, unknown>, prompt: string, generat
     prompt: generationPrompt,
     model: selectImageModel(prompt, args.model),
     seed: args.seed ? Number(args.seed) : randomSeed(),
-    width: args.width ? clamp(Math.floor(Number(args.width)), 64, 2048) : DEFAULTS.IMAGE_WIDTH,
-    height: args.height ? clamp(Math.floor(Number(args.height)), 64, 2048) : DEFAULTS.IMAGE_HEIGHT,
+    width: args.width ? clampNumber(args.width, DEFAULTS.IMAGE_WIDTH, 64, 2048) : DEFAULTS.IMAGE_WIDTH,
+    height: args.height ? clampNumber(args.height, DEFAULTS.IMAGE_HEIGHT, 64, 2048) : DEFAULTS.IMAGE_HEIGHT,
     enhance: args.enhance !== undefined ? args.enhance === true : DEFAULTS.IMAGE_ENHANCE,
     safe: args.safe !== undefined ? args.safe === true : DEFAULTS.IMAGE_SAFE,
     outputPath: args.outputPath ? String(args.outputPath) : DEFAULTS.OUTPUT_DIR,
@@ -134,8 +134,8 @@ export async function handleGenerateImageUrl(
     prompt: built.generationPrompt,
     model: selectImageModel(prompt, args.model),
     seed: args.seed ? Number(args.seed) : randomSeed(),
-    width: args.width ? clamp(Math.floor(Number(args.width)), 64, 2048) : DEFAULTS.IMAGE_WIDTH,
-    height: args.height ? clamp(Math.floor(Number(args.height)), 64, 2048) : DEFAULTS.IMAGE_HEIGHT,
+    width: args.width ? clampNumber(args.width, DEFAULTS.IMAGE_WIDTH, 64, 2048) : DEFAULTS.IMAGE_WIDTH,
+    height: args.height ? clampNumber(args.height, DEFAULTS.IMAGE_HEIGHT, 64, 2048) : DEFAULTS.IMAGE_HEIGHT,
     enhance: args.enhance !== undefined ? args.enhance === true : DEFAULTS.IMAGE_ENHANCE,
     safe: args.safe !== undefined ? args.safe === true : DEFAULTS.IMAGE_SAFE,
     authConfig,
